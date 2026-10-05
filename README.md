@@ -1,25 +1,30 @@
 # Architecture Atlas
 
-Maps of how software is built: one layered architecture chart per kind of software, explained without reference to any
-language or product.
+Plates of how software is built: one layered architecture map per kind of software, for agentic engineers. Every
+component opens into what it does, the design decisions behind it, its pitfalls, how to verify it, and what it depends
+on. Language- and product-agnostic throughout.
 
-A static site with no build step and no dependencies. Open `index.html` directly, or serve the folder with any static
-server.
+A static site with no build step at runtime and no dependencies besides Google Fonts. Open `index.html` directly, or
+serve the folder with any static server.
 
 ## Layout
 
-- `index.html`: home page and catalogue of every planned map.
-- `assets/style.css`: colour tokens (light and dark), page chrome and chart styles.
-- `assets/chart.js`: draws a map from its data file and wires up the map page.
-- `assets/catalog.js`: the list of planned maps, by domain.
-- `atlas/<slug>/index.html` and `atlas/<slug>/data.js`: one folder per map.
+- `index.html`, `atlas/<slug>/index.html`: generated pages (do not edit; see `tools/build.mjs`).
+- `assets/atlas.css`: design tokens (light and dark), page and chart styles.
+- `assets/atlas.js`: the data registry (`ATLAS.register`, `ATLAS.details`) and theme toggle.
+- `assets/chart.js`: draws a plate as SVG, plus home-page thumbnails.
+- `assets/site.js`: home page and plate page (tooltip, detail drawer, search, field notes).
+- `assets/catalog.js`: all 50 plates, by domain. Plate numbers come from order.
+- `assets/manifest.js`: generated list of drawn plates and their data files.
+- `atlas/<slug>/data.js`: a plate's structure. `atlas/<slug>/details*.js`: its component entries.
 
-## Adding a map
+## Adding a plate
 
-1. Copy `atlas/game-engine/` to `atlas/<slug>/`.
-2. Rewrite `data.js`: `bands` run top (highest level) to bottom (foundation); each group has a `title`, a `color`
-   (1 to 15, see `--c1`...`--c15`), `optional: true` if not every implementation needs it, an `about` paragraph and its
-   `items`. An item is `"Label|detail shown on hover"`.
-3. Add the slug as the third value of its entry in `assets/catalog.js`, which marks it "Map ready" on the home page.
+1. Write `atlas/<slug>/data.js` (`ATLAS.register({...})`) using `atlas/game-engine/data.js` as the model: bands top to
+   bottom, 8-15 groups each with a unique `color` 1-15, `optional: true` where many implementations omit the system.
+2. Write `atlas/<slug>/details*.js` (`ATLAS.details(slug, { id: { s, d, k, p, v, dep } })`) for every component and
+   cross-cutting concern: hover summary, detail, decisions, pitfalls, how to verify, direct dependencies.
+3. `node tools/check-map.mjs <slug>` until it prints `ok` (structure, word counts, ids, dependencies, banned names).
+4. `node tools/build.mjs` to regenerate pages and the manifest.
 
-Data is loaded with `<script>` tags rather than `fetch`, so pages also work when opened from disk.
+Data loads through script tags rather than `fetch`, so pages also work when opened from disk.
