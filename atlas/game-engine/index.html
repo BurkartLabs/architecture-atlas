@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Engine · Architecture Atlas</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<header class="site">
+  <a class="brand" href="../../index.html"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="16" width="24" height="8" rx="2" fill="var(--c1)"/><rect x="1" y="7" width="11" height="7" rx="2" fill="var(--c4)"/><rect x="14" y="7" width="11" height="7" rx="2" fill="var(--c6)" opacity=".85"/><rect x="5" y="1" width="16" height="4" rx="2" fill="var(--c3)"/></svg>Architecture Atlas</a>
+  <nav><a href="../../index.html">All maps</a><button data-theme-toggle>Theme</button></nav>
+</header>
+<div class="maphead">
+  <h1 id="mapTitle">Game Engine</h1>
+  <div class="legend">
+    <span><svg width="26" height="14"><rect x="1" y="1" width="24" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Core</span>
+    <span><svg width="26" height="14"><rect x="1" y="1" width="24" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 3"/></svg>Optional</span>
+    <span>Hover a box for detail</span>
+  </div>
+  <div class="controls"><button id="fitBtn">Actual size</button></div>
+  <p class="lede" id="mapLede"></p>
+</div>
+<div class="chartwrap"><svg id="chart" class="atlas-chart" xmlns="http://www.w3.org/2000/svg" role="img"></svg></div>
+<article class="layers" id="layers"></article>
+<footer>Architecture Atlas · maps of how software is built, in any language</footer>
+<script src="../../assets/chart.js"></script>
+<script src="data.js"></script>
+<script>AtlasChart.mountPage(window.ATLAS_MAP);</script>
+</body>
+</html>
