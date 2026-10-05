@@ -3,11 +3,11 @@
 // columns still fit at MINBOX. Group backgrounds, dependency lines and boxes are separate layers so lines run
 // under the boxes they connect.
 window.AtlasChart = (() => {
-  const W = 1760, M = 22, HEADER = 44, RUL = 20, GUT = 66, PILLAR = 222, GAP = 14, GP = 12, BG = 8, HEAD = 40,
-    LH = 15, MINBOX = 116, BANDGAP = 18, CELL = 110, ROCK = 40;
-  const FONT = '12px Geist, ui-sans-serif, system-ui, sans-serif';
-  const TITLE = '600 15.5px Fraunces, Georgia, serif';
-  const MONO = '10px "Geist Mono", ui-monospace, monospace';
+  const W = 1600, M = 20, HEADER = 46, RUL = 22, GUT = 82, PILLAR = 236, GAP = 14, GP = 12, BG = 8, HEAD = 46,
+    LH = 18, MINBOX = 138, BANDGAP = 20, CELL = 120, ROCK = 44;
+  const FONT = '14px Geist, ui-sans-serif, system-ui, sans-serif';
+  const TITLE = '600 18px Fraunces, Georgia, serif';
+  const MONO = '10.5px "Geist Mono", ui-monospace, monospace';
   const ctx = document.createElement("canvas").getContext("2d");
   const esc = s => window.ATLAS.esc(s);
   const measure = (t, font) => { ctx.font = font; return ctx.measureText(t).width; };
@@ -23,7 +23,7 @@ window.AtlasChart = (() => {
     lines.push(cur); return lines;
   }
   function label(lines, x, cy) {
-    const top = cy - (lines.length - 1) * LH / 2 + 4;
+    const top = cy - (lines.length - 1) * LH / 2 + 5;
     return `<text>` + lines.map((l, i) => `<tspan x="${x}" y="${top + i * LH}">${esc(l)}</tspan>`).join("") + `</text>`;
   }
   function hatch(id, color, gap, op) {
@@ -53,30 +53,32 @@ window.AtlasChart = (() => {
         if (boxW >= MINBOX || R > 40) break;
       }
       const rows = Math.max(...groups.map((g, i) => Math.ceil(g.items.length / cols[i])));
-      const maxLines = Math.max(...groups.flatMap(g => g.items.map(it => wrap(it.n, boxW - 22).length)));
-      const boxH = maxLines * LH + 16;
+      const maxLines = Math.max(...groups.flatMap(g => g.items.map(it => wrap(it.n, boxW - 24).length)));
+      const boxH = maxLines * LH + 18;
       const gh = HEAD + rows * boxH + (rows - 1) * BG + GP;
-      const numeral = window.ATLAS.roman(nb - bi);
+      const numeral = window.ATLAS.roman(bi + 1);
 
       // Gutter: numeral, rotated band name (when it fits) and a bracket spanning the band.
       const mid = y + gh / 2;
-      gutter += `<text class="numeral" x="${M + RUL + 20}" y="${mid + 8}" text-anchor="middle">${numeral}</text>`;
+      gutter += `<text class="numeral" x="${M + RUL + 25}" y="${mid + 10}" text-anchor="middle">${numeral}</text>`;
       const name = band.label.toUpperCase();
       if (measure(name, MONO) * 1.18 < gh - 16)
-        gutter += `<text class="bandname" transform="translate(${M + RUL + 45} ${mid}) rotate(-90)" text-anchor="middle">${esc(name)}</text>`;
+        gutter += `<text class="bandname" transform="translate(${M + RUL + 60} ${mid}) rotate(-90)" text-anchor="middle">${esc(name)}</text>`;
       gutter += `<path class="bracket" d="M${cx0 - 6},${y + .5} H${cx0 - 11} V${y + gh - .5} H${cx0 - 6}"/>`;
 
       let gx = cx0;
       groups.forEach((g, i) => {
         const gw = cols[i] * boxW + (cols[i] - 1) * BG + 2 * GP;
         const tW = measure(g.title, TITLE);
+        // Long titles in narrow systems shrink to fit rather than run past the border.
+        const fit = Math.min(1, (gw - 2 * GP - 6) / tW);
         const acc = `--accent:var(--c${g.color})`;
         bgs += `<g class="grp${g.optional ? " opt" : ""}" data-g="${g.k}" style="${acc}">` +
           `<rect class="bg" x="${gx}" y="${y}" width="${gw}" height="${gh}" rx="6"/>` +
           (g.optional ? `<rect x="${gx}" y="${y}" width="${gw}" height="${gh}" rx="6" fill="url(#hx${g.color})" pointer-events="none"/>` : "") +
-          `<text class="gt" x="${gx + GP + 1}" y="${y + 26}">${esc(g.title)}</text>` +
-          (tW + 30 < gw - 2 * GP ? `<text class="gc" x="${gx + GP + tW + 9}" y="${y + 26}">${g.items.length}</text>` : "") +
-          (g.optional && tW + 100 < gw - 2 * GP ? `<text class="badge" x="${gx + gw - GP}" y="${y + 25}" text-anchor="end">OPTIONAL</text>` : "") +
+          `<text class="gt" x="${gx + GP + 1}" y="${y + 29}"${fit < 1 ? ` style="font-size:${(18 * fit).toFixed(1)}px"` : ""}>${esc(g.title)}</text>` +
+          (tW + 30 < gw - 2 * GP ? `<text class="gc" x="${gx + GP + tW + 9}" y="${y + 29}">${g.items.length}</text>` : "") +
+          (g.optional && tW + 120 < gw - 2 * GP ? `<text class="badge" x="${gx + gw - GP}" y="${y + 28}" text-anchor="end">OPTIONAL</text>` : "") +
           `</g>`;
         g.items.forEach((it, j) => {
           const r = Math.floor(j / cols[i]), c = j % cols[i];
@@ -93,11 +95,11 @@ window.AtlasChart = (() => {
     const pH = bottom - firstTop, pIn = PILLAR - 32;
     bgs += `<g class="pillar"><rect class="bg" x="${pillarX}" y="${firstTop}" width="${PILLAR}" height="${pH}" rx="6"/>` +
       `<rect class="bg2" x="${pillarX + 4}" y="${firstTop + 4}" width="${PILLAR - 8}" height="${pH - 8}" rx="4"/>` +
-      `<text class="pt" x="${pillarX + 16}" y="${firstTop + 32}">Cross-cutting</text>` +
-      `<text class="t-mono" x="${pillarX + 16}" y="${firstTop + 50}">EVERY LAYER</text></g>`;
-    const cb = map.cross.map(c => ({ c, h: wrap(c.n, pIn - 22).length * LH + 16 }));
-    const spare = Math.max(8, (pH - 66 - 14 - cb.reduce((a, b) => a + b.h, 0)) / (cb.length + 1));
-    let py = firstTop + 66 + spare;
+      `<text class="pt" x="${pillarX + 16}" y="${firstTop + 34}">Cross-cutting</text>` +
+      `<text class="t-mono" x="${pillarX + 16}" y="${firstTop + 54}">EVERY LAYER</text></g>`;
+    const cb = map.cross.map(c => ({ c, h: wrap(c.n, pIn - 24).length * LH + 18 }));
+    const spare = Math.max(8, (pH - 72 - 14 - cb.reduce((a, b) => a + b.h, 0)) / (cb.length + 1));
+    let py = firstTop + 72 + spare;
     for (const b of cb) {
       items.push({ it: b.c, g: "cross", group: { title: "Cross-cutting concerns", color: 0 }, band: null, numeral: "",
         x: pillarX + 16, y: py, w: pIn, h: b.h, acc: "--accent:var(--ink)", opt: false });
@@ -106,12 +108,12 @@ window.AtlasChart = (() => {
 
     // Bedrock.
     const ry = bottom + 18, ground = map.ground.join("   ·   ").toUpperCase();
-    const lw = measure(ground, '10.5px "Geist Mono", monospace') * 1.2 + 40;
+    const lw = measure(ground, '12px "Geist Mono", monospace') * 1.2 + 44;
     const rockX = cx0, rockW = cxR - cx0, lx = rockX + rockW / 2 - lw / 2;
     let rock = `<g class="bedrock"><rect class="rock" x="${rockX}" y="${ry}" width="${rockW}" height="${ROCK}" rx="3" fill="url(#rock)"/>` +
       `<rect class="label" x="${lx}" y="${ry + 9}" width="${lw}" height="${ROCK - 18}" rx="2"/>` +
-      `<text x="${rockX + rockW / 2}" y="${ry + ROCK / 2 + 4}" text-anchor="middle">${esc(ground)}</text></g>`;
-    gutter += `<text class="bandname" transform="translate(${M + RUL + 34} ${ry + ROCK / 2}) rotate(-90)" text-anchor="middle" style="font-size:8px">BEDROCK</text>`;
+      `<text x="${rockX + rockW / 2}" y="${ry + ROCK / 2 + 4.5}" text-anchor="middle">${esc(ground)}</text></g>`;
+    gutter += `<text class="bandname" transform="translate(${M + RUL + 60} ${ry + ROCK / 2}) rotate(-90)" text-anchor="middle" style="font-size:8px">BEDROCK</text>`;
 
     const innerB = ry + ROCK + 16, H = innerB + M;
 
@@ -136,13 +138,13 @@ window.AtlasChart = (() => {
 
     // Boxes.
     for (const b of items) {
-      const lines = wrap(b.it.n, b.w - 22);
+      const lines = wrap(b.it.n, b.w - 24);
       const r = ref(b.x + b.w / 2, b.y + b.h / 2);
       meta.set(b.it.id, { ...b, id: b.it.id, n: b.it.n, ref: r, cx: b.x + b.w / 2, cy: b.y + b.h / 2 });
       boxes += `<g class="box${b.opt ? " opt" : ""}" data-id="${b.it.id}" style="${b.acc}" tabindex="0" role="button" aria-label="${esc(b.it.n)}">` +
         `<rect class="face" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3"/>` +
         `<rect class="tick" x="${b.x + 4}" y="${b.y + 5}" width="2.5" height="${b.h - 10}" rx="1.25"/>` +
-        label(lines, b.x + 13, b.y + b.h / 2) + `</g>`;
+        label(lines, b.x + 15, b.y + b.h / 2) + `</g>`;
     }
 
     // Header strip and frames.

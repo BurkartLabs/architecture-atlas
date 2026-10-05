@@ -212,38 +212,40 @@ button, input { font: inherit; color: inherit; }
 .seg button { border: 0; background: none; padding: 0 13px; cursor: pointer; color: var(--ink-2); font-size: 13px; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 
+/* Plate pages use a wider column so the chart draws near full size. */
+.wrap.wide { max-width: 1720px; }
 .plate-frame {
   position: relative; background: var(--card); border: 1px solid var(--rule-2); border-radius: 4px;
   box-shadow: var(--shadow); overflow: auto; margin: 4px 0 0;
 }
 .plate-frame.scroll { cursor: grab; }
 .atlas-chart { display: block; width: 100%; height: auto; }
-.atlas-chart.native { width: 1760px; max-width: none; }
+.atlas-chart.native { width: 1600px; max-width: none; }
 .hint { color: var(--ink-3); font-size: 12.5px; margin: 10px 2px 0; display: flex; gap: 8px; align-items: center; }
 .hint kbd { font-family: var(--f-mono); font-size: 10.5px; border: 1px solid var(--rule-2); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
 
 /* Chart SVG */
 .atlas-chart text { font-family: var(--f-text); }
-.atlas-chart .t-mono { font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; fill: var(--ink-3); }
-.atlas-chart .t-head { font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; fill: var(--ink-2); }
+.atlas-chart .t-mono { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; fill: var(--ink-3); }
+.atlas-chart .t-head { font-family: var(--f-mono); font-size: 12.5px; letter-spacing: .16em; fill: var(--ink-2); }
 .atlas-chart .frame { fill: none; stroke: var(--rule-2); }
 .atlas-chart .frame-in { fill: none; stroke: var(--ink); stroke-width: 1.2; }
 .atlas-chart .ruler line { stroke: var(--rule-2); }
-.atlas-chart .ruler text { font-family: var(--f-mono); font-size: 9.5px; fill: var(--ink-3); letter-spacing: .08em; }
+.atlas-chart .ruler text { font-family: var(--f-mono); font-size: 11px; fill: var(--ink-3); letter-spacing: .08em; }
 .atlas-chart .graticule line { stroke: var(--rule); stroke-dasharray: 1 5; }
-.atlas-chart .numeral { font-family: var(--f-display); font-style: italic; font-size: 24px; fill: var(--ink); font-variation-settings: "opsz" 72; }
-.atlas-chart .bandname { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .18em; fill: var(--ink-3); }
+.atlas-chart .numeral { font-family: var(--f-display); font-style: italic; font-size: 30px; fill: var(--ink); font-variation-settings: "opsz" 72; }
+.atlas-chart .bandname { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .18em; fill: var(--ink-3); }
 .atlas-chart .bracket { fill: none; stroke: var(--ink-3); stroke-width: 1; }
 .atlas-chart .grp { transition: opacity .25s; }
 .atlas-chart .grp .bg { fill: color-mix(in srgb, var(--accent) 8%, var(--card)); stroke: color-mix(in srgb, var(--accent) 70%, var(--card)); stroke-width: 1.1; }
 .atlas-chart .grp.opt .bg { stroke-dasharray: 5 3; }
-.atlas-chart .grp .gt { font-family: var(--f-display); font-size: 15.5px; font-weight: 600; fill: var(--accent); font-variation-settings: "opsz" 24; }
-.atlas-chart .grp .gc { font-family: var(--f-mono); font-size: 10px; fill: var(--ink-3); }
-.atlas-chart .grp .badge { font-family: var(--f-mono); font-size: 9px; letter-spacing: .16em; fill: var(--ink-3); }
+.atlas-chart .grp .gt { font-family: var(--f-display); font-size: 18px; font-weight: 600; fill: var(--accent); font-variation-settings: "opsz" 24; }
+.atlas-chart .grp .gc { font-family: var(--f-mono); font-size: 11.5px; fill: var(--ink-3); }
+.atlas-chart .grp .badge { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .16em; fill: var(--ink-3); }
 .atlas-chart .box { cursor: pointer; outline: none; transition: opacity .2s; }
 .atlas-chart .box .face { fill: var(--card); stroke: var(--rule-2); transition: fill .15s, stroke .15s; }
 .atlas-chart .box .tick { fill: var(--accent); }
-.atlas-chart .box text { fill: var(--ink); font-size: 12px; pointer-events: none; }
+.atlas-chart .box text { fill: var(--ink); font-size: 14px; pointer-events: none; }
 .atlas-chart .box:hover .face, .atlas-chart .box:focus-visible .face { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 12%, var(--card)); }
 .atlas-chart .box.sel .face { fill: var(--accent); stroke: var(--accent); }
 .atlas-chart .box.sel text { fill: var(--card); font-weight: 600; }
@@ -260,10 +262,10 @@ button, input { font: inherit; color: inherit; }
 .atlas-chart .links circle { fill: var(--mark); }
 .atlas-chart .pillar .bg { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1; }
 .atlas-chart .pillar .bg2 { fill: none; stroke: var(--rule-2); }
-.atlas-chart .pillar .pt { font-family: var(--f-display); font-style: italic; font-size: 18px; fill: var(--ink); }
+.atlas-chart .pillar .pt { font-family: var(--f-display); font-style: italic; font-size: 21px; fill: var(--ink); }
 .atlas-chart .bedrock .rock { stroke: var(--ink); stroke-width: 1; }
 .atlas-chart .bedrock .label { fill: var(--card); stroke: var(--ink); stroke-width: 1; }
-.atlas-chart .bedrock text { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .16em; fill: var(--ink); }
+.atlas-chart .bedrock text { font-family: var(--f-mono); font-size: 12px; letter-spacing: .16em; fill: var(--ink); }
 .atlas-chart .compass path { fill: var(--ink); }
 .atlas-chart .compass circle { fill: none; stroke: var(--rule-2); }
 
@@ -333,7 +335,8 @@ button, input { font: inherit; color: inherit; }
 .drawer .pager button { background: none; border: 1px solid var(--rule-2); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--ink-2); max-width: 48%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .drawer .pager button:hover { color: var(--ink); border-color: var(--ink-2); }
 .drawer .pager button:disabled { opacity: .35; cursor: default; }
-@media (min-width: 1280px) { body.drawer-open .plate-main { margin-right: 480px; } }
+/* Push the page aside only when the chart can stay readable beside the drawer; otherwise the drawer overlays it. */
+@media (min-width: 1900px) { body.drawer-open .plate-main { margin-right: 480px; } }
 
 /* Field notes */
 .notes { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; margin-top: 30px; }

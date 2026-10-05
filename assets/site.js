@@ -77,7 +77,7 @@
 
       <div class="section-head"><h2>Reading a plate</h2><span class="rule"></span></div>
       <div class="howto">
-        <div><svg viewBox="0 0 46 28"><text x="2" y="22" style="font:italic 22px var(--f-display);fill:var(--mark)">IV</text><path d="M34 3h-4v22h4" style="fill:none;stroke:var(--ink-3)"/></svg><b>Layers climb upward</b><p>Roman numerals count from the bedrock. Each layer is built on the ones beneath it and should not reach above itself.</p></div>
+        <div><svg viewBox="0 0 46 28"><text x="2" y="22" style="font:italic 22px var(--f-display);fill:var(--mark)">II</text><path d="M34 3h-4v22h4" style="fill:none;stroke:var(--ink-3)"/></svg><b>Layers read top down</b><p>Layer I is closest to the people using the software; the highest numeral sits on the bedrock. Each layer is built on the ones beneath it and should not reach above itself.</p></div>
         <div><svg viewBox="0 0 46 28">${SW.core.replace('viewBox="0 0 26 14"', 'x="0" y="7" width="20" height="14" viewBox="0 0 26 14"')}${SW.opt.replace('viewBox="0 0 26 14"', 'x="24" y="7" width="20" height="14" viewBox="0 0 26 14"').replace(/lg-h/g, "lg-h2")}</svg><b>Core or optional</b><p>Solid systems appear in almost every implementation. Hatched ones are added for particular needs and can be left out.</p></div>
         <div><svg viewBox="0 0 46 28"><rect x="1" y="16" width="14" height="10" rx="2" style="fill:var(--card);stroke:var(--mark)"/><rect x="31" y="2" width="14" height="10" rx="2" style="fill:var(--card);stroke:var(--ink-3)"/><path d="M8 16 C8 8, 38 20, 38 12" style="fill:none;stroke:var(--mark);stroke-width:1.5"/></svg><b>Lines are dependencies</b><p>Open any component: solid red lines run to what it depends on, dashed lines to what depends on it.</p></div>
         <div><svg viewBox="0 0 46 28"><defs><pattern id="lg-r" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" style="stroke:var(--ink)"/></pattern></defs><rect x="1" y="18" width="44" height="8" rx="1.5" fill="url(#lg-r)" style="stroke:var(--ink)"/><rect x="33" y="1" width="12" height="14" rx="1.5" style="fill:var(--paper-2);stroke:var(--ink)"/></svg><b>Margins and bedrock</b><p>The right-hand panel holds concerns that shape every layer. The hatched strip below is what the software runs on.</p></div>
@@ -119,7 +119,7 @@
     </nav>`;
 
     if (!map) {
-      app.innerHTML = topbar(root, [`Plate ${p.no}`, p.domain]) + `<main class="plate-main"><div class="wrap">
+      app.innerHTML = topbar(root, [`Plate ${p.no}`, p.domain]) + `<main class="plate-main"><div class="wrap wide">
         <section class="plate-hero"><div><div class="eyebrow mono">Plate ${p.no} · ${esc(p.domain)}</div><h1>${esc(p.name)}</h1><p class="lede">${esc(p.blurb)}.</p></div></section>
         <div class="pending">${ghost()}<div class="msg"><div><span class="mono" style="color:var(--mark)">In preparation</span><b>This plate is still being drawn.</b>
           <p>Its layers, systems and components will appear here. Drawn so far: ${readyPlates.map(r => `<a href="${root}atlas/${r.slug}/index.html">${esc(r.name)}</a>`).join(", ")}.</p></div></div></div>
@@ -134,7 +134,7 @@
     const comps = groups.reduce((a, g) => a + g.items.length, 0);
     const optN = groups.filter(g => g.optional).length;
 
-    app.innerHTML = topbar(root, [`Plate ${p.no}`, p.domain]) + `<main class="plate-main"><div class="wrap">
+    app.innerHTML = topbar(root, [`Plate ${p.no}`, p.domain]) + `<main class="plate-main"><div class="wrap wide">
       <section class="plate-hero">
         <div><div class="eyebrow mono">Plate ${p.no} · ${esc(p.domain)}</div><h1>${esc(map.title)}</h1><p class="lede">${esc(map.lede)}</p></div>
         <div class="plate-stats mono">
@@ -262,10 +262,10 @@
 
     // Field notes.
     const notes = document.getElementById("notes");
-    notes.innerHTML = `<nav aria-label="Layers">${map.bands.map((b, i) => `<a href="#layer-${i}"><i>${A.roman(map.bands.length - i)}</i>${esc(b.label)}</a>`).join("")}
+    notes.innerHTML = `<nav aria-label="Layers">${map.bands.map((b, i) => `<a href="#layer-${i}"><i>${A.roman(i + 1)}</i>${esc(b.label)}</a>`).join("")}
         <a href="#layer-cross"><i>∗</i>Cross-cutting</a></nav>
       <div>${map.bands.map((b, i) => `<article class="band-note" id="layer-${i}">
-        <header><i>${A.roman(map.bands.length - i)}</i><h3>${esc(b.label)}</h3></header><p>${esc(b.intro)}</p>
+        <header><i>${A.roman(i + 1)}</i><h3>${esc(b.label)}</h3></header><p>${esc(b.intro)}</p>
         ${b.groups.map(gk => { const g = map.groups[gk]; return `<div class="grp-note"><i style="background:var(--c${g.color})"></i>
           <h4>${esc(g.title)} <span class="pill">${g.optional ? "Optional" : "Core"}</span></h4><p>${esc(g.about)}</p>
           <div class="comps">${g.items.map(it => `<button data-open="${esc(it.id)}">${esc(it.n)}</button>`).join("")}</div></div>`; }).join("")}
