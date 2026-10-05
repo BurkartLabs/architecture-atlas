@@ -66,5 +66,8 @@ Mono), and Node.js scripts for tooling.
 
 ## Status
 
-Early. The site and the plate format work, but only 5 of the 50 planned plates have content. There is no licence file
-yet, so no reuse rights are granted until one is added.
+Early. The site and the plate format work, but only 5 of the 50 planned plates have content.
+
+## Licence
+
+All rights reserved. The source is public to read, not to reuse: see [LICENSE](LICENSE).
