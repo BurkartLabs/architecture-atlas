@@ -29,78 +29,113 @@
   const colophon = `<footer class="wrap"><div class="colophon mono"><span>Architecture Atlas</span><span>How software is built, in any language</span></div></footer>`;
 
   // ── Home ────────────────────────────────────────────────────────────────
+  // One catalogue grouped by domain, with a sticky domain list (a chip bar on phones) and a filter.
   async function home(root) {
     const plates = A.plates();
     const ready = plates.filter(p => A.ready(p.slug));
     await A.load(ready.map(p => `${root}atlas/${p.slug}/data.js`));
-    const comps = ready.reduce((a, p) => a + Object.values(A.maps[p.slug]?.groups || {}).reduce((s, g) => s + g.items.length, 0), 0);
-    const domains = window.ATLAS_CATALOG;
-    const stack = ready.slice(0, 3).reverse();
+    const size = slug => { const m = A.maps[slug]; return m ? Object.values(m.groups).reduce((s, g) => s + g.items.length, 0) : 0; };
+    const comps = ready.reduce((a, p) => a + size(p.slug), 0);
+    const domains = window.ATLAS_CATALOG.map((d, i) => ({ ...d, id: `d${i + 1}`, plates: plates.filter(p => p.domain === d.domain) }));
+
+    const tile = p => {
+      const m = A.maps[p.slug];
+      return `<a class="tile${m ? "" : " pending"}" href="${root}atlas/${p.slug}/index.html" data-q="${esc((p.name + " " + p.blurb).toLowerCase())}">
+        <span class="tthumb">${m ? AtlasChart.thumb(m, "t" + p.no) : ""}</span>
+        <span class="tbody"><span class="tno mono">${p.no}</span><b>${esc(p.name)}</b><span class="tbl">${esc(p.blurb)}</span>
+        <span class="tmeta mono">${m ? `${size(p.slug)} components · ${m.bands.length} layers` : "In preparation"}</span></span></a>`;
+    };
 
     const app = document.getElementById("app");
     app.innerHTML = topbar(root) + `
     <main class="wrap">
-      <section class="hero">
+      <section class="intro">
         <div>
           <div class="eyebrow mono">A field atlas for agentic engineers</div>
           <h1>How software is <em>built</em>, plate by plate.</h1>
-          <p class="lede">Every kind of software has an architecture that outlives the language it is written in. Each plate maps one kind, layer by layer, and opens every component into what it does, the decisions behind it, how it fails and how to prove it works.</p>
-          <div class="hero-stats mono">
-            <div><b>${plates.length}</b><span>Plates</span></div>
-            <div><b>${domains.length}</b><span>Domains</span></div>
-            <div><b>${ready.length}</b><span>Drawn</span></div>
-            <div><b>${comps}</b><span>Components mapped</span></div>
-          </div>
+          <p class="lede">Each plate maps one kind of software layer by layer. Open any component for what it does, the decisions behind it, how it fails and how to prove it works.</p>
         </div>
-        <div class="stack">${stack.map(p => `<a href="${root}atlas/${p.slug}/index.html" aria-label="${esc(p.name)}">${AtlasChart.thumb(A.maps[p.slug], "st" + p.no)}<div class="cap mono"><span>Pl. ${p.no}</span><span>${esc(p.name)}</span></div></a>`).join("")}</div>
+        <div class="intro-stats mono">
+          <div><b>${plates.length}</b><span>Plates</span></div>
+          <div><b>${domains.length}</b><span>Domains</span></div>
+          <div><b>${comps.toLocaleString("en-US")}</b><span>Components</span></div>
+        </div>
       </section>
 
-      <div class="section-head"><h2>Drawn plates <em>— open one</em></h2><span class="rule"></span><span class="mono" style="color:var(--ink-3)">${ready.length} of ${plates.length}</span></div>
-      <div class="drawn">${ready.map(p => {
-        const m = A.maps[p.slug], n = Object.values(m.groups).reduce((s, g) => s + g.items.length, 0);
-        return `<a class="plate-card" href="${root}atlas/${p.slug}/index.html"><div class="thumb">${AtlasChart.thumb(m, "c" + p.no)}</div>
-          <div class="meta"><span class="no mono">Plate ${p.no}</span><h3>${esc(m.title)}</h3><p>${n} components · ${Object.keys(m.groups).length} systems · ${m.bands.length} layers</p></div></a>`;
-      }).join("")}</div>
-
-      <div class="section-head" id="index"><h2>Index of plates</h2><span class="rule"></span></div>
-      <div class="index-tools">
-        <label class="search">${ICON.search}<input id="q" type="search" placeholder="Find a kind of software…" aria-label="Filter plates"></label>
-        <button class="chip-toggle" id="onlyReady" aria-pressed="false">Drawn only</button>
-        <span class="count mono" id="count"></span>
+      <div class="catalog" id="index">
+        <aside class="cat-nav" aria-label="Domains">
+          <label class="search">${ICON.search}<input id="q" type="search" placeholder="Find a kind of software…" aria-label="Filter plates"><kbd class="kbd">/</kbd></label>
+          <nav>${domains.map(d => `<a href="#${d.id}" data-d="${d.id}"><span>${esc(d.domain)}</span><i class="mono" data-count="${d.id}">${d.plates.length}</i></a>`).join("")}</nav>
+          <p class="cat-count mono" id="count"></p>
+        </aside>
+        <div class="cat-main">
+          ${domains.map(d => `<section class="cat" id="${d.id}">
+            <h2><span>${esc(d.domain)}</span><i class="mono">${d.plates.length} plates</i></h2>
+            <div class="tiles">${d.plates.map(tile).join("")}</div>
+          </section>`).join("")}
+          <p class="no-hits" id="noHits" hidden>No plate matches that. Try a broader word, such as “database” or “compiler”.</p>
+        </div>
       </div>
-      <div class="index" id="idx">${domains.map(d => `<section class="domain-block"><h3>${esc(d.domain)} <span class="mono">${d.entries.length}</span></h3>
-        ${d.entries.map(([slug]) => {
-          const p = plates.find(x => x.slug === slug), r = A.ready(slug);
-          return `<a class="row${r ? " ready" : ""}" href="${root}atlas/${slug}/index.html" data-q="${esc((p.name + " " + p.blurb).toLowerCase())}">
-            <span class="no">${p.no}</span><span class="nm">${esc(p.name)}</span><span class="st">${r ? "Drawn" : "In prep."}</span><span class="bl">${esc(p.blurb)}</span></a>`;
-        }).join("")}</section>`).join("")}</div>
 
-      <div class="section-head"><h2>Reading a plate</h2><span class="rule"></span></div>
-      <div class="howto">
-        <div><svg viewBox="0 0 46 28"><text x="2" y="22" style="font:italic 22px var(--f-display);fill:var(--mark)">II</text><path d="M34 3h-4v22h4" style="fill:none;stroke:var(--ink-3)"/></svg><b>Layers read top down</b><p>Layer I is closest to the people using the software; the highest numeral sits on the bedrock. Each layer is built on the ones beneath it and should not reach above itself.</p></div>
-        <div><svg viewBox="0 0 46 28">${SW.core.replace('viewBox="0 0 26 14"', 'x="0" y="7" width="20" height="14" viewBox="0 0 26 14"')}${SW.opt.replace('viewBox="0 0 26 14"', 'x="24" y="7" width="20" height="14" viewBox="0 0 26 14"').replace(/lg-h/g, "lg-h2")}</svg><b>Core or optional</b><p>Solid systems appear in almost every implementation. Hatched ones are added for particular needs and can be left out.</p></div>
-        <div><svg viewBox="0 0 46 28"><rect x="1" y="16" width="14" height="10" rx="2" style="fill:var(--card);stroke:var(--mark)"/><rect x="31" y="2" width="14" height="10" rx="2" style="fill:var(--card);stroke:var(--ink-3)"/><path d="M8 16 C8 8, 38 20, 38 12" style="fill:none;stroke:var(--mark);stroke-width:1.5"/></svg><b>Lines are dependencies</b><p>Open any component: solid red lines run to what it depends on, dashed lines to what depends on it.</p></div>
-        <div><svg viewBox="0 0 46 28"><defs><pattern id="lg-r" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" style="stroke:var(--ink)"/></pattern></defs><rect x="1" y="18" width="44" height="8" rx="1.5" fill="url(#lg-r)" style="stroke:var(--ink)"/><rect x="33" y="1" width="12" height="14" rx="1.5" style="fill:var(--paper-2);stroke:var(--ink)"/></svg><b>Margins and bedrock</b><p>The right-hand panel holds concerns that shape every layer. The hatched strip below is what the software runs on.</p></div>
-      </div>
+      <details class="reading">
+        <summary><span>Reading a plate</span><i class="mono">Layers, core and optional, dependencies, margins</i></summary>
+        <div class="howto">
+          <div><svg viewBox="0 0 46 28"><text x="2" y="22" style="font:italic 22px var(--f-display);fill:var(--mark)">II</text><path d="M34 3h-4v22h4" style="fill:none;stroke:var(--ink-3)"/></svg><b>Layers read top down</b><p>Layer I is closest to the people using the software; the highest numeral sits on the bedrock. Each layer is built on the ones beneath it.</p></div>
+          <div><svg viewBox="0 0 46 28">${SW.core.replace('viewBox="0 0 26 14"', 'x="0" y="7" width="20" height="14" viewBox="0 0 26 14"')}${SW.opt.replace('viewBox="0 0 26 14"', 'x="24" y="7" width="20" height="14" viewBox="0 0 26 14"').replace(/lg-h/g, "lg-h2")}</svg><b>Core or optional</b><p>Solid systems appear in almost every implementation. Hatched ones are added for particular needs.</p></div>
+          <div><svg viewBox="0 0 46 28"><rect x="1" y="16" width="14" height="10" rx="2" style="fill:var(--card);stroke:var(--mark)"/><rect x="31" y="2" width="14" height="10" rx="2" style="fill:var(--card);stroke:var(--ink-3)"/><path d="M8 16 C8 8, 38 20, 38 12" style="fill:none;stroke:var(--mark);stroke-width:1.5"/></svg><b>Lines are dependencies</b><p>Open a component: solid red lines run to what it depends on, dashed lines to what depends on it.</p></div>
+          <div><svg viewBox="0 0 46 28"><defs><pattern id="lg-r" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" style="stroke:var(--ink)"/></pattern></defs><rect x="1" y="18" width="44" height="8" rx="1.5" fill="url(#lg-r)" style="stroke:var(--ink)"/><rect x="33" y="1" width="12" height="14" rx="1.5" style="fill:var(--paper-2);stroke:var(--ink)"/></svg><b>Margins and bedrock</b><p>The right-hand panel holds concerns that shape every layer. The hatched strip is what the software runs on.</p></div>
+        </div>
+      </details>
     </main>` + colophon;
 
-    const q = document.getElementById("q"), only = document.getElementById("onlyReady"), count = document.getElementById("count");
+    // Filter: hides tiles and empty domains, and updates each domain's count in the nav.
+    const q = document.getElementById("q"), count = document.getElementById("count"), noHits = document.getElementById("noHits");
     function filter() {
-      const v = q.value.trim().toLowerCase(), o = only.getAttribute("aria-pressed") === "true";
+      const v = q.value.trim().toLowerCase();
       let shown = 0;
-      document.querySelectorAll("#idx .domain-block").forEach(b => {
-        let any = false;
-        b.querySelectorAll(".row").forEach(r => {
-          const hit = (!v || r.dataset.q.includes(v)) && (!o || r.classList.contains("ready"));
-          r.classList.toggle("hidden", !hit); if (hit) { any = true; shown++; }
-        });
-        b.classList.toggle("hidden", !any);
+      document.querySelectorAll(".cat").forEach(sec => {
+        let n = 0;
+        sec.querySelectorAll(".tile").forEach(t => { const hit = !v || t.dataset.q.includes(v); t.hidden = !hit; if (hit) n++; });
+        sec.hidden = n === 0;
+        const c = document.querySelector(`[data-count="${sec.id}"]`);
+        c.textContent = n; c.closest("a").classList.toggle("empty", n === 0);
+        shown += n;
       });
-      count.textContent = `${shown} of ${plates.length} plates`;
+      count.textContent = v ? `${shown} of ${plates.length} plates` : `${plates.length} plates`;
+      noHits.hidden = shown > 0;
     }
     q.addEventListener("input", filter);
-    only.onclick = () => { only.setAttribute("aria-pressed", only.getAttribute("aria-pressed") !== "true"); filter(); };
+    addEventListener("keydown", e => {
+      if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+      if (e.key === "Escape" && document.activeElement === q) { q.value = ""; filter(); q.blur(); }
+    });
     filter();
+
+    // Highlight the domain in view, and keep the active chip visible in the phone chip bar.
+    const links = [...document.querySelectorAll(".cat-nav nav a")];
+    const setActive = id => links.forEach(a => {
+      const on = a.dataset.d === id;
+      a.classList.toggle("on", on);
+      if (on && a.parentElement.scrollWidth > a.parentElement.clientWidth) a.scrollIntoView({ block: "nearest", inline: "center" });
+    });
+    // The active domain is the last one whose heading has passed under the sticky bars. (Picking the most visible
+    // section highlighted the previous domain on phones, whose tail was still on screen after a jump.)
+    const sections = [...document.querySelectorAll(".cat")];
+    let ticking = false;
+    let clickedAt = 0;
+    function track() {
+      ticking = false;
+      if (performance.now() - clickedAt < 400) return; // a jump near the page end must keep the domain that was clicked
+      const line = (innerWidth <= 900 ? 190 : 110);
+      const live = sections.filter(s => !s.hidden);
+      let cur = live[0];
+      for (const s of live) if (s.getBoundingClientRect().top - line <= 0) cur = s;
+      if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = live.at(-1) || cur;
+      if (cur) setActive(cur.id);
+    }
+    addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(track); } }, { passive: true });
+    links.forEach(a => a.addEventListener("click", () => { clickedAt = performance.now(); setActive(a.dataset.d); }));
+    track();
   }
 
   // ── Plate page ──────────────────────────────────────────────────────────

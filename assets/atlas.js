@@ -20,7 +20,7 @@ window.ATLAS = {
   load(srcs) {
     return Promise.all(srcs.map(src => new Promise(res => {
       const s = document.createElement("script");
-      s.src = src; s.async = true; s.onload = res; s.onerror = () => { console.warn("missing", src); res(); };
+      s.src = window.ATLAS_BUILD ? `${src}?v=${window.ATLAS_BUILD}` : src; s.async = true; s.onload = res; s.onerror = () => { console.warn("missing", src); res(); };
       document.head.appendChild(s);
     })));
   },
