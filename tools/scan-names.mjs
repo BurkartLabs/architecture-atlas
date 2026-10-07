@@ -19,7 +19,7 @@ const NAMES = [
   "nginx", "Nginx", "Apache", "HAProxy", "Envoy", "Istio", "Linkerd", "Varnish", "Memcached", "Elasticsearch",
   "Lucene", "Solr", "OpenSearch", "RocksDB", "LevelDB", "Cassandra", "DynamoDB", "MongoDB", "RabbitMQ", "Pulsar",
   "NATS", "Flink", "Spark", "Hadoop", "Airflow", "Iceberg", "Snowflake", "BigQuery", "Redshift", "ClickHouse",
-  "Neo4j", "Debezium", "Django", "Rails", "Laravel", "Spring", "Next\\.js", "Vue", "Svelte", "GraphQL",
+  "Neo4j", "Debezium", "Parquet", "Avro", "oplog", "Fail-safe", "Django", "Rails", "Laravel", "Spring", "Next\\.js", "Vue", "Svelte", "GraphQL",
   "Selenium", "Playwright", "Puppeteer", "WordPress", "Contentful", "Prometheus", "PromQL", "Grafana", "Jaeger",
   "Zipkin", "OpenTelemetry", "InfluxDB", "Terraform", "Pulumi", "Ansible", "Puppet", "Chef", "Consul", "ZooKeeper",
   "Raft", "Paxos", "Akka", "Orleans", "Slurm", "gRPC", "Thrift", "Protobuf", "protobuf", "Maglev",
@@ -60,6 +60,8 @@ for (const slug of slugs) {
       // ids are kebab-case and never shown; skip matches inside them
       const before = text.slice(Math.max(0, m.index - 40), m.index), after = text.slice(m.index, m.index + 50);
       if (/[a-z0-9]-$/.test(before) || /^[A-Za-z0-9]+-[a-z0-9]/.test(after) && /"[a-z0-9-]*$/.test(before)) continue;
+      // a whole quoted lowercase id, such as "oplog" in a dep list
+      if (/"$/.test(before) && /^[a-z0-9-]+"/.test(after)) continue;
       hits++;
       console.log(`${slug}/${f}: …${before.replace(/\s+/g, " ")}[${m[0]}]${after.slice(m[0].length).replace(/\s+/g, " ")}…`);
     }
