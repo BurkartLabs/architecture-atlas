@@ -14,13 +14,15 @@ window.ATLAS = {
   },
   ready(slug) { return !!(window.ATLAS_MANIFEST && window.ATLAS_MANIFEST[slug]); },
 
-  // Loads scripts in order; resolves when the last one has run. Script tags (not fetch) so pages work from disk.
+  // Loads scripts in parallel; resolves when all have run. Order does not matter, because every data and details file
+  // only registers itself. Script tags (not fetch) so pages work from disk. Loading one at a time left the home page
+  // blank for about 8 seconds once it needed all 50 plates.
   load(srcs) {
-    return srcs.reduce((p, src) => p.then(() => new Promise(res => {
+    return Promise.all(srcs.map(src => new Promise(res => {
       const s = document.createElement("script");
-      s.src = src; s.onload = res; s.onerror = () => { console.warn("missing", src); res(); };
+      s.src = src; s.async = true; s.onload = res; s.onerror = () => { console.warn("missing", src); res(); };
       document.head.appendChild(s);
-    })), Promise.resolve());
+    })));
   },
   esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); },
   roman(n) {
