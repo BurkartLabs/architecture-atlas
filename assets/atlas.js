@@ -7,9 +7,12 @@ window.ATLAS = {
 
   // Flat list of catalog entries with plate numbers.
   plates() {
+    // An entry's fourth value is its plate number. The first 50 plates have none and are numbered by position, so
+    // plates added inside an existing domain never renumber the ones already published.
     const out = [];
-    for (const d of window.ATLAS_CATALOG) for (const [slug, name, blurb] of d.entries)
-      out.push({ slug, name, blurb, domain: d.domain, no: String(out.length + 1).padStart(2, "0") });
+    let n = 0;
+    for (const d of window.ATLAS_CATALOG) for (const [slug, name, blurb, no] of d.entries)
+      out.push({ slug, name, blurb, domain: d.domain, no: String(no ?? ++n).padStart(2, "0") });
     return out;
   },
   ready(slug) { return !!(window.ATLAS_MANIFEST && window.ATLAS_MANIFEST[slug]); },
