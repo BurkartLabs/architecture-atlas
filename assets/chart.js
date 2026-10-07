@@ -1,9 +1,10 @@
 // Draws a plate (a layered architecture map) as SVG, and the small schematic thumbnails used on the home page.
-// Layout: bands top to bottom; every box in a band shares one width, and each band uses the fewest rows whose
+// Layout: bedrock at the top, then the foundation as layer I, rising to the user-facing layer, then the
+// cross-cutting concerns as one strip. Every box in a band shares one width, and each band uses the fewest rows whose
 // columns still fit at MINBOX. Group backgrounds, dependency lines and boxes are separate layers so lines run
 // under the boxes they connect.
 window.AtlasChart = (() => {
-  const W = 1600, M = 20, HEADER = 46, RUL = 22, GUT = 82, PILLAR = 236, GAP = 14, GP = 12, BG = 8, HEAD = 46,
+  const W = 1600, M = 20, HEADER = 46, RUL = 22, GUT = 82, GAP = 14, GP = 12, BG = 8, HEAD = 46,
     LH = 18, MINBOX = 138, BANDGAP = 20, CELL = 120, ROCK = 44;
   const FONT = '14px Geist, ui-sans-serif, system-ui, sans-serif';
   const TITLE = '600 18px Fraunces, Georgia, serif';
@@ -37,18 +38,28 @@ window.AtlasChart = (() => {
   }
 
   function render(svgEl, map, det) {
-    const cx0 = M + RUL + GUT, cxR = W - M - 16, pillarX = cxR - PILLAR, contentW = pillarX - GAP - cx0;
+    const cx0 = M + RUL + GUT, cxR = W - M - 16, contentW = cxR - cx0;
     const cy0 = M + HEADER + RUL + 16;
     const meta = new Map();
     let bgs = "", boxes = "", gutter = "";
     let defs = `<defs>${Array.from({ length: 15 }, (_, i) => hatch(`hx${i + 1}`, `var(--c${i + 1})`, 7, .32)).join("")}` +
       hatch("rock", "var(--ink)", 6, .55) + `</defs>`;
-    let y = cy0, firstTop = cy0;
     const nb = map.bands.length;
     const items = [], groupsN = Object.keys(map.groups).length;
 
-    map.bands.forEach((band, bi) => {
-      const groups = band.groups.map(k => ({ k, ...map.groups[k] }));
+    // Bedrock first: the plate reads from what the software runs on, up through its layers.
+    let y = cy0;
+    const ground = map.ground.join("   ·   ").toUpperCase();
+    const lw = measure(ground, '12px "Geist Mono", monospace') * 1.2 + 44;
+    const lx = cx0 + contentW / 2 - lw / 2;
+    const rock = `<g class="bedrock"><rect class="rock" x="${cx0}" y="${y}" width="${contentW}" height="${ROCK}" rx="3" fill="url(#rock)"/>` +
+      `<rect class="label" x="${lx}" y="${y + 9}" width="${lw}" height="${ROCK - 18}" rx="2"/>` +
+      `<text x="${cx0 + contentW / 2}" y="${y + ROCK / 2 + 4.5}" text-anchor="middle">${esc(ground)}</text></g>`;
+    gutter += `<text class="bandname" transform="translate(${M + RUL + 60} ${y + ROCK / 2}) rotate(-90)" text-anchor="middle" style="font-size:8px">BEDROCK</text>`;
+    y += ROCK + BANDGAP;
+
+    // Lays out one band: every box shares one width, using the fewest rows whose columns still fit at MINBOX.
+    function place(groups, label, numeral, cross) {
       const n = groups.length;
       let cols, boxW;
       for (let R = 1; ; R++) {
@@ -61,12 +72,11 @@ window.AtlasChart = (() => {
       const maxLines = Math.max(...groups.flatMap(g => g.items.map(it => wrap(it.n, boxW - 24).length)));
       const boxH = maxLines * LH + 18;
       const gh = HEAD + rows * boxH + (rows - 1) * BG + GP;
-      const numeral = window.ATLAS.roman(bi + 1);
 
       // Gutter: numeral, rotated band name (when it fits) and a bracket spanning the band.
       const mid = y + gh / 2;
       gutter += `<text class="numeral" x="${M + RUL + 25}" y="${mid + 10}" text-anchor="middle">${numeral}</text>`;
-      const name = band.label.toUpperCase();
+      const name = label.toUpperCase();
       if (measure(name, MONO) * 1.18 < gh - 16)
         gutter += `<text class="bandname" transform="translate(${M + RUL + 60} ${mid}) rotate(-90)" text-anchor="middle">${esc(name)}</text>`;
       gutter += `<path class="bracket" d="M${cx0 - 6},${y + .5} H${cx0 - 11} V${y + gh - .5} H${cx0 - 6}"/>`;
@@ -77,50 +87,34 @@ window.AtlasChart = (() => {
         const tW = measure(g.title, TITLE);
         // Long titles in narrow systems shrink to fit rather than run past the border.
         const fit = Math.min(1, (gw - 2 * GP - 6) / tW);
-        const acc = `--accent:var(--c${g.color})`;
-        bgs += `<g class="grp${g.optional ? " opt" : ""}" data-g="${g.k}" style="${acc}">` +
+        const acc = cross ? "--accent:var(--ink)" : `--accent:var(--c${g.color})`;
+        bgs += `<g class="grp${cross ? " pillar" : ""}${g.optional ? " opt" : ""}" data-g="${g.k}" style="${acc}">` +
           `<rect class="bg" x="${gx}" y="${y}" width="${gw}" height="${gh}" rx="6"/>` +
+          (cross ? `<rect class="bg2" x="${gx + 4}" y="${y + 4}" width="${gw - 8}" height="${gh - 8}" rx="4"/>` : "") +
           (g.optional ? `<rect x="${gx}" y="${y}" width="${gw}" height="${gh}" rx="6" fill="url(#hx${g.color})" pointer-events="none"/>` : "") +
           `<text class="gt" x="${gx + GP + 1}" y="${y + 29}"${fit < 1 ? ` style="font-size:${(18 * fit).toFixed(1)}px"` : ""}>${esc(g.title)}</text>` +
           (tW + 30 < gw - 2 * GP ? `<text class="gc" x="${gx + GP + tW + 9}" y="${y + 29}">${g.items.length}</text>` : "") +
-          (g.optional && tW + 120 < gw - 2 * GP ? `<text class="badge" x="${gx + gw - GP}" y="${y + 28}" text-anchor="end">OPTIONAL</text>` : "") +
+          (cross ? `<text class="badge" x="${gx + gw - GP}" y="${y + 28}" text-anchor="end">SHAPE EVERY LAYER</text>` :
+            g.optional && tW + 120 < gw - 2 * GP ? `<text class="badge" x="${gx + gw - GP}" y="${y + 28}" text-anchor="end">OPTIONAL</text>` : "") +
           `</g>`;
         g.items.forEach((it, j) => {
           const r = Math.floor(j / cols[i]), c = j % cols[i];
-          const bx = gx + GP + c * (boxW + BG), by = y + HEAD + r * (boxH + BG);
-          items.push({ it, g: g.k, group: g, band, numeral, x: bx, y: by, w: boxW, h: boxH, acc, opt: !!g.optional });
+          items.push({ it, g: g.k, group: cross ? { title: g.title, color: 0 } : g, band: cross ? null : { label },
+            numeral: cross ? "" : numeral, x: gx + GP + c * (boxW + BG), y: y + HEAD + r * (boxH + BG), w: boxW, h: boxH,
+            acc, opt: !!g.optional });
         });
         gx += gw + GAP;
       });
       y += gh + BANDGAP;
-    });
-    const bottom = y - BANDGAP;
-
-    // Cross-cutting concerns: a legend panel beside every layer.
-    const pH = bottom - firstTop, pIn = PILLAR - 32;
-    bgs += `<g class="pillar"><rect class="bg" x="${pillarX}" y="${firstTop}" width="${PILLAR}" height="${pH}" rx="6"/>` +
-      `<rect class="bg2" x="${pillarX + 4}" y="${firstTop + 4}" width="${PILLAR - 8}" height="${pH - 8}" rx="4"/>` +
-      `<text class="pt" x="${pillarX + 16}" y="${firstTop + 34}">Cross-cutting</text>` +
-      `<text class="t-mono" x="${pillarX + 16}" y="${firstTop + 54}">EVERY LAYER</text></g>`;
-    const cb = map.cross.map(c => ({ c, h: wrap(c.n, pIn - 24).length * LH + 18 }));
-    const spare = Math.max(8, (pH - 72 - 14 - cb.reduce((a, b) => a + b.h, 0)) / (cb.length + 1));
-    let py = firstTop + 72 + spare;
-    for (const b of cb) {
-      items.push({ it: b.c, g: "cross", group: { title: "Cross-cutting concerns", color: 0 }, band: null, numeral: "",
-        x: pillarX + 16, y: py, w: pIn, h: b.h, acc: "--accent:var(--ink)", opt: false });
-      py += b.h + spare;
     }
 
-    // Bedrock.
-    const ry = bottom + 18, ground = map.ground.join("   ·   ").toUpperCase();
-    const lw = measure(ground, '12px "Geist Mono", monospace') * 1.2 + 44;
-    const rockX = cx0, rockW = cxR - cx0, lx = rockX + rockW / 2 - lw / 2;
-    let rock = `<g class="bedrock"><rect class="rock" x="${rockX}" y="${ry}" width="${rockW}" height="${ROCK}" rx="3" fill="url(#rock)"/>` +
-      `<rect class="label" x="${lx}" y="${ry + 9}" width="${lw}" height="${ROCK - 18}" rx="2"/>` +
-      `<text x="${rockX + rockW / 2}" y="${ry + ROCK / 2 + 4.5}" text-anchor="middle">${esc(ground)}</text></g>`;
-    gutter += `<text class="bandname" transform="translate(${M + RUL + 60} ${ry + ROCK / 2}) rotate(-90)" text-anchor="middle" style="font-size:8px">BEDROCK</text>`;
+    // Layers from the foundation (I) up to the layer people and programs use. The data lists bands top-down, so reverse.
+    [...map.bands].reverse().forEach((band, bi) =>
+      place(band.groups.map(k => ({ k, ...map.groups[k] })), band.label, window.ATLAS.roman(bi + 1), false));
+    // Cross-cutting concerns close the plate as one full-width strip.
+    place([{ k: "cross", title: "Cross-cutting concerns", items: map.cross }], "Every layer", "∗", true);
 
-    const innerB = ry + ROCK + 16, H = innerB + M;
+    const innerB = y - BANDGAP + 16, H = innerB + M;
 
     // Rulers and graticule: letters across, numbers down. Grid references come from these cells.
     const nCols = Math.ceil((cxR - cx0) / CELL), nRows = Math.ceil((innerB - 8 - cy0) / CELL);
@@ -219,14 +213,18 @@ window.AtlasChart = (() => {
 
   // A small schematic of a plate: bands as strips, groups sized by component count.
   function thumb(map, prefix) {
-    const w = 320, h = 210, pad = 8, pw = 34, rockH = 12;
-    const innerW = w - pad * 3 - pw, avail = h - pad * 2 - rockH - 6;
-    const weights = map.bands.map(b => Math.max(...b.groups.map(g => map.groups[g].items.length)) + 6);
-    const tot = weights.reduce((a, b) => a + b, 0), gap = 4;
-    let y = pad, s = `<defs>${hatch(prefix + "r", "var(--ink)", 4, .5)}` +
+    // Same order as the plate: bedrock, the foundation (layer I) up to the top layer, then the cross-cutting strip.
+    const w = 320, h = 210, pad = 8, rockH = 12, crossH = 14, gap = 4;
+    const innerW = w - pad * 2, avail = h - pad * 2 - rockH - crossH - gap * 2;
+    const bands = [...map.bands].reverse();
+    const weights = bands.map(b => Math.max(...b.groups.map(g => map.groups[g].items.length)) + 6);
+    const tot = weights.reduce((a, b) => a + b, 0);
+    let s = `<defs>${hatch(prefix + "r", "var(--ink)", 4, .5)}` +
       Array.from({ length: 15 }, (_, i) => hatch(`${prefix}h${i + 1}`, `var(--c${i + 1})`, 4, .45)).join("") + `</defs>`;
-    map.bands.forEach((b, i) => {
-      const bh = (avail - gap * (map.bands.length - 1)) * weights[i] / tot;
+    s += `<rect x="${pad}" y="${pad}" width="${innerW}" height="${rockH}" rx="2" fill="url(#${prefix}r)" style="stroke:var(--ink);stroke-width:.8"/>`;
+    let y = pad + rockH + gap;
+    bands.forEach((b, i) => {
+      const bh = (avail - gap * (bands.length - 1)) * weights[i] / tot;
       const counts = b.groups.map(g => map.groups[g].items.length + 3);
       const ct = counts.reduce((a, c) => a + c, 0);
       let x = pad;
@@ -238,8 +236,7 @@ window.AtlasChart = (() => {
       });
       y += bh + gap;
     });
-    s += `<rect x="${w - pad - pw}" y="${pad}" width="${pw}" height="${y - gap - pad}" rx="2" style="fill:var(--paper-2);stroke:var(--ink);stroke-width:.8"/>`;
-    s += `<rect x="${pad}" y="${y + 2}" width="${w - pad * 2}" height="${rockH}" rx="2" fill="url(#${prefix}r)" style="stroke:var(--ink);stroke-width:.8"/>`;
+    s += `<rect x="${pad}" y="${y}" width="${innerW}" height="${crossH}" rx="2" style="fill:var(--paper-2);stroke:var(--ink);stroke-width:.8"/>`;
     return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${s}</svg>`;
   }
 
