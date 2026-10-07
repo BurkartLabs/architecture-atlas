@@ -244,7 +244,7 @@ Stores and serves build outputs and dependencies. Cover: repository formats for 
 Reviews proposed changes before merge. Cover: change sets and revisions, diff computation and display, inline comments and threads, reviewers and code owners, approvals and rules, status checks, merge strategies, rebasing, suggestions, notifications, large diffs, stacked changes, review analytics. Related: code-forge, ci-system, version-control.
 
 ### code-forge: Code hosting forge
-Hosts repositories and collaboration around them. Cover: repository storage and replication, the git-protocol server, permissions and teams, the web interface, pull or merge requests, issues, webhooks and apps, search, wikis and pages, forks, mirroring, large-file storage, audit logs, scaling hot repositories. Related: version-control, code-review, ci-system.
+Hosts repositories and collaboration around them. Cover: repository storage and replication, the repository protocol server, permissions and teams, the web interface, pull or merge requests, issues, webhooks and apps, search, wikis and pages, forks, mirroring, large-file storage, audit logs, scaling hot repositories. Related: version-control, code-review, ci-system.
 
 ### feature-flags: Feature flag service
 Turns features on for chosen users at runtime. Cover: flag definitions and variants, targeting rules and segments, percentage rollouts and consistent bucketing, SDKs and local evaluation, streaming updates, fallbacks when the service is down, experiments, audit history, flag lifecycle and cleanup, environments, permissions. Related: progressive-delivery, experiment-tracker.
