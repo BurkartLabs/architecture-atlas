@@ -9,9 +9,9 @@ It is a static site. There is no build step to view it and no runtime dependenci
 
 ## What it does today
 
-- A home page listing all 50 planned plates by domain, with a search box and a thumbnail for each plate that is drawn.
-- Five plates are drawn: `game-engine`, `os-kernel`, `compiler`, `web-browser` and `relational-database`. The other 45
-  are catalogued and have a placeholder page.
+- A home page listing all 50 plates by domain, with a search box and a thumbnail for each.
+- All 50 plates are drawn: 5,298 components across seven domains, each with a full entry. `docs/writing-a-plate.md` is
+  the brief they were written against.
 - Each drawn plate renders as an SVG chart of numbered layers, groups and components, with optional components marked
   and a hover tooltip.
 - Clicking a component opens a detail drawer with its summary, design decisions, pitfalls, how to verify it, and its
@@ -66,7 +66,8 @@ Mono), and Node.js scripts for tooling.
 
 ## Status
 
-Early. The site and the plate format work, but only 5 of the 50 planned plates have content.
+All 50 planned plates are drawn and pass `tools/check-map.mjs`. The entries were written by AI agents against the brief
+and have not yet been reviewed by people who build each kind of software, so treat individual claims accordingly.
 
 ## Licence
 

@@ -15,16 +15,21 @@ window.AtlasChart = (() => {
 
   function wrap(text, width) {
     ctx.font = FONT;
+    // Words wider than the box ("Snapshot-at-the-beginning") are split after their hyphens first.
+    const words = text.split(" ").flatMap(w => ctx.measureText(w).width <= width ? [w] : w.split(/(?<=-)/));
     const lines = []; let cur = "";
-    for (const w of text.split(" ")) {
-      const t = cur ? cur + " " + w : w;
+    for (const w of words) {
+      const t = !cur ? w : cur.endsWith("-") ? cur + w : cur + " " + w;
       if (!cur || ctx.measureText(t).width <= width) cur = t; else { lines.push(cur); cur = w; }
     }
     lines.push(cur); return lines;
   }
-  function label(lines, x, cy) {
+  function label(lines, x, cy, maxW) {
     const top = cy - (lines.length - 1) * LH / 2 + 5;
-    return `<text>` + lines.map((l, i) => `<tspan x="${x}" y="${top + i * LH}">${esc(l)}</tspan>`).join("") + `</text>`;
+    // A fragment that still does not fit (no hyphen to break at) shrinks rather than running past the box.
+    const widest = maxW ? Math.max(...lines.map(l => measure(l, FONT))) : 0;
+    const shrink = widest > maxW ? ` style="font-size:${(14 * maxW / widest).toFixed(1)}px"` : "";
+    return `<text${shrink}>` + lines.map((l, i) => `<tspan x="${x}" y="${top + i * LH}">${esc(l)}</tspan>`).join("") + `</text>`;
   }
   function hatch(id, color, gap, op) {
     return `<pattern id="${id}" width="${gap}" height="${gap}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">` +
@@ -144,7 +149,7 @@ window.AtlasChart = (() => {
       boxes += `<g class="box${b.opt ? " opt" : ""}" data-id="${b.it.id}" style="${b.acc}" tabindex="0" role="button" aria-label="${esc(b.it.n)}">` +
         `<rect class="face" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3"/>` +
         `<rect class="tick" x="${b.x + 4}" y="${b.y + 5}" width="2.5" height="${b.h - 10}" rx="1.25"/>` +
-        label(lines, b.x + 15, b.y + b.h / 2) + `</g>`;
+        label(lines, b.x + 15, b.y + b.h / 2, b.w - 22) + `</g>`;
     }
 
     // Header strip and frames.

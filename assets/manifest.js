@@ -265,10 +265,130 @@ window.ATLAS_MANIFEST = {
     "details-4.js",
     "details.js"
   ],
+  "time-series-database": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details.js"
+  ],
+  "cluster-orchestrator": [
+    "data.js",
+    "details-1.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js"
+  ],
+  "consensus-service": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "service-proxy": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js"
+  ],
+  "cdn": [
+    "data.js",
+    "details-1.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js"
+  ],
+  "observability-stack": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "infrastructure-as-code": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details-7.js",
+    "details.js"
+  ],
   "game-engine": [
     "data.js",
     "details-a.js",
     "details-b.js",
     "details-c.js"
+  ],
+  "physics-engine": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js",
+    "details-e.js",
+    "details-f.js"
+  ],
+  "graphics-renderer": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "multiplayer-netcode": [
+    "data.js",
+    "details-1.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js"
+  ],
+  "graphics-editor": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details-7.js",
+    "details.js"
+  ],
+  "spreadsheet": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js",
+    "details-e.js"
+  ],
+  "media-pipeline": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js"
+  ],
+  "messaging-app": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js"
+  ],
+  "ml-framework": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
   ]
 };
