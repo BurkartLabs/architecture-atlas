@@ -10,7 +10,7 @@ It is a static site. There is no build step to view it and no runtime dependenci
 ## What it does today
 
 - A home page listing all 50 plates by domain, with a search box and a thumbnail for each.
-- All 50 plates are drawn: 5,298 components across seven domains, each with a full entry. `docs/writing-a-plate.md` is
+- All 200 plates are drawn: 19,997 components across 13 domains, each with a full entry. `docs/writing-a-plate.md` is
   the brief they were written against.
 - Each drawn plate renders as an SVG chart of numbered layers, groups and components, with optional components marked
   and a hover tooltip.
@@ -66,7 +66,7 @@ Mono), and Node.js scripts for tooling.
 
 ## Status
 
-All 50 planned plates are drawn and pass `tools/check-map.mjs`. The entries were written by AI agents against the brief
+All 200 planned plates are drawn and pass `tools/check-map.mjs`; `tools/scan-names.mjs` is a second-line check for product names. The entries were written by AI agents against the brief
 and have not yet been reviewed by people who build each kind of software, so treat individual claims accordingly.
 
 ## Licence
