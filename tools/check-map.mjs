@@ -26,7 +26,7 @@ const det = ATLAS.det[slug] || {};
 const words = s => (typeof s === "string" ? s.trim().split(/\s+/).filter(Boolean).length : 0);
 const range = (what, s, lo, hi) => { const n = words(s); if (n < lo || n > hi) errs.push(`${what}: ${n} words (want ${lo}-${hi})`); };
 // Products, brands and implementation languages: the atlas describes kinds of software, not products.
-const BRANDS = /\b(Unity|Unreal|Godot|Bevy|Linux|Windows (?:Server|NT|XP|10|11)|Microsoft Windows|macOS|FreeBSD|Android|iOS|Chrome|Chromium|Firefox|Safari|WebKit|Blink|Gecko|Servo|V8|SpiderMonkey|LLVM|GCC|Clang|MSVC|PostgreSQL|Postgres|MySQL|SQLite|Oracle|SQL Server|InnoDB|Redis|Kafka|Vulkan|DirectX|Direct3D|D3D12|OpenGL|Metal|PhysX|Havok|Box2D|Wwise|FMOD|Steam (?:Deck|store|client|Workshop)|PlayStation|Xbox|Nintendo|React (?:Native|components?|hooks?)|Node\.js|Java|Python|Rust|C\+\+|C#|Golang|NVIDIA|AMD|Intel|ARM|x86|Apple|Microsoft|Google|Mozilla)\b/;
+const BRANDS = /\b(Unity|Unreal|Godot|Bevy|Linux|Windows (?:Server|NT|XP|10|11)|Microsoft Windows|macOS|FreeBSD|Android|iOS|Chrome|Chromium|Firefox|Safari|WebKit|Blink|Gecko|Servo (?:engine|browser)|V8|SpiderMonkey|LLVM|GCC|Clang|MSVC|PostgreSQL|Postgres|MySQL|SQLite|Oracle|SQL Server|InnoDB|Redis|Kafka|Vulkan|DirectX|Direct3D|D3D12|OpenGL|Metal|PhysX|Havok|Box2D|Wwise|FMOD|Steam (?:Deck|store|client|Workshop)|PlayStation|Xbox|Nintendo|React (?:Native|components?|hooks?)|Node\.js|Java|Python|Rust|C\+\+|C#|Golang|NVIDIA|AMD|Intel|ARM|x86|Apple|Microsoft|Google|Mozilla)\b/;
 const brand = (what, s) => { const m = typeof s === "string" && s.match(BRANDS); if (m) errs.push(`${what}: names a product, brand or language ("${m[0]}")`); };
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 

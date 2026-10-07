@@ -56,7 +56,7 @@ ATLAS.register({
         { id: "header-editor", n: "Header editor" },
         { id: "body-serializers", n: "Body serializers" },
         { id: "multipart-encoder", n: "Multipart encoder" },
-        { id: "graphql-composer", n: "GraphQL composer" },
+        { id: "graphql-composer", n: "Graph query composer" },
         { id: "rpc-message-builder", n: "RPC message builder" },
       ] },
     coll: { title: "Collections", color: 3,
@@ -83,7 +83,7 @@ ATLAS.register({
       about: "Most APIs already have a machine-readable description. Importing it avoids hand-typing hundreds of requests, but the description and the live service drift apart, so import is a continuing relationship, not a one-time step.",
       items: [
         { id: "openapi-importer", n: "API description importer" },
-        { id: "graphql-introspection", n: "GraphQL introspection" },
+        { id: "graphql-introspection", n: "Graph query introspection" },
         { id: "rpc-descriptors", n: "RPC descriptors & reflection" },
         { id: "format-converters", n: "Importers & exporters" },
         { id: "schema-sync", n: "Schema sync & drift" },
