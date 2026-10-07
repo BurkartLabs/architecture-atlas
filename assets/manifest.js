@@ -138,24 +138,6 @@ window.ATLAS_MANIFEST = {
     "details-4.js",
     "details.js"
   ],
-  "rendering-engine": [
-    "data.js"
-  ],
-  "web-server": [
-    "data.js"
-  ],
-  "web-framework": [
-    "data.js"
-  ],
-  "static-site-cms": [
-    "data.js"
-  ],
-  "search-engine": [
-    "data.js"
-  ],
-  "web-crawler": [
-    "data.js"
-  ],
   "relational-database": [
     "data.js",
     "details-2.js",
