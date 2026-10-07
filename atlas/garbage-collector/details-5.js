@@ -1,0 +1,131 @@
+// Details for the garbage collector plate, part 5: allocation and special spaces.
+ATLAS.details("garbage-collector", {
+  "bump-pointer": {
+    s: "Allocation by advancing a pointer through a contiguous free area: check that the object fits, return the old pointer, store the new one.",
+    d: "The allocator keeps a current pointer and a limit. A request adds its size to the pointer; if the result is at or below the limit, the old pointer is the new object's address. That is a handful of instructions, with no search and excellent locality, since consecutively allocated objects sit side by side. It requires free space to be contiguous, which compacting and copying collectors provide and non-moving ones do not. When the limit is hit, the allocator takes a slow path to get a new area or collect. It is hard because multithreaded programs need separate areas per thread to avoid atomics, and a bump allocator wastes the tail of an area when an object does not fit.",
+    k: ["Bump allocation vs free-list allocation: bumping is much faster and keeps related objects together, but needs compaction or copying to make free space contiguous.", "Atomic shared pointer vs per-thread areas: a shared pointer is simple, but every allocation pays an atomic and contends; per-thread areas remove both at the cost of wasted tail space."],
+    p: ["A shared bump pointer under many threads becomes a contention point that limits the whole program's scaling.", "Skipping the limit check on a rarely taken path allows an object to overrun into adjacent memory."],
+    v: "Allocate a million small objects in sequence and confirm each address equals the previous address plus its size, the cost per allocation is a few nanoseconds, and an object that exceeds the limit takes the slow path.",
+    dep: ["tlab", "allocation-slow-path", "regions"]
+  },
+  "tlab": {
+    s: "A thread-local allocation buffer: a chunk of free memory handed to one thread, from which it bump-allocates without any synchronization.",
+    d: "When a thread needs memory and its buffer is empty, it takes a fresh chunk from the shared heap under a lock or atomic. All further allocations in that chunk are plain pointer bumps with no atomic. Since the chunk belongs to the thread, objects from different threads are not interleaved, which reduces false sharing. When a chunk has too little space left for a request, the remainder is filled with a dummy object so the heap stays walkable. It is hard because buffers waste space at their tails, many idle threads each hold unused buffers, and the retired remainders must be formatted so heap walkers see valid objects.",
+    k: ["Per-thread buffers vs a shared allocator: buffers give lock-free fast paths and locality, but cost space in tails and in buffers held by idle threads.", "Retire a buffer when an object does not fit vs allocate that object outside: retiring keeps allocation in the buffer for small objects but wastes space; allocating outside keeps the buffer for later small ones."],
+    p: ["A thousand idle threads each hold a buffer, and the young area is full of unused space.", "A retired buffer's tail not formatted, so a heap walk reads garbage as an object header."],
+    v: "Run many threads allocating at full speed and confirm per-thread addresses are contiguous, the shared lock is taken rarely per thousand allocations, and a heap walk after retirement parses cleanly to the end.",
+    dep: ["bump-pointer", "tlab-sizing", "allocation-slow-path", "regions"]
+  },
+  "tlab-sizing": {
+    s: "Choosing how large each thread-local buffer is, and adapting it per thread to that thread's allocation rate.",
+    d: "A buffer too small makes the thread return to the slow path often; one too large wastes memory and leaves tails. The allocator tracks each thread's allocation volume per collection interval and sizes its next buffer to fit a target number of refills per interval. A thread that stops allocating gets a small buffer or none. Sizes are bounded by the young area share. The estimate uses moving averages of recent behavior. It is hard because behavior changes between phases, and a sudden increase in allocation by a thread with a small buffer causes many refills until the estimate catches up.",
+    k: ["Adaptive per-thread size vs one global size: adaptation fits both busy and idle threads, but needs per-thread statistics and reacts slowly to change.", "Aim for several refills per cycle vs few: more refills waste less space and balance threads, while fewer refills reduce slow-path work."],
+    p: ["Threads that wake once a minute keep large buffers sized from a past burst and hold unused memory.", "Sizing too aggressively for a short-lived burst leaves each thread's buffer mostly empty at collection time."],
+    v: "Run one thread allocating heavily and nine mostly idle, and confirm from allocator statistics the busy thread's buffers grow and refill rarely, while idle threads keep small buffers and little wasted space.",
+    dep: ["tlab", "allocation-rate-metrics"]
+  },
+  "inline-allocation": {
+    s: "Compiled code that performs the bump-pointer fast path directly, with the slow-path call out of line, so most allocations never enter the runtime.",
+    d: "The compiler emits a sequence that loads the thread's current and limit pointers, adds the object size, compares, stores the new pointer, and writes the header and zeroes or initializes fields. If the check fails, it calls the runtime slow path. When the size is constant the arithmetic is folded. Further optimization lets the compiler combine several allocations into one pointer bump, or remove allocation entirely when the object does not escape. It is hard because the code sequence must stay in step with the allocator's data layout, and the object must not be visible to a collection between the bump and the header write.",
+    k: ["Inline fast path vs call into the runtime every time: inline is several times faster for small objects but increases code size and ties compiled code to allocator layout.", "Combine adjacent allocations into one bump vs separate: combining saves instructions, but makes all objects in the group die or move together in the buffer."],
+    p: ["Compiled code that is not updated when the allocator layout changes writes headers in the wrong place.", "A safepoint between the pointer bump and the header write lets the collector see an unformatted object."],
+    v: "Inspect generated code for a small object allocation and confirm the fast path is a few instructions with an out-of-line slow-path call, then run a loop to confirm the slow path is taken only on buffer exhaustion.",
+    dep: ["bump-pointer", "tlab", "compiler-runtime-cooperation", "memory-zeroing"]
+  },
+  "free-list-allocator": {
+    s: "An allocator that keeps lists of free blocks and satisfies a request by finding a block that fits, splitting it if too large and coalescing neighbors when blocks are freed.",
+    d: "Free blocks are linked into lists, sometimes ordered by address or size. A request uses first-fit, best-fit or next-fit search, and splits the chosen block, returning the remainder to the list. When a collector frees blocks it merges adjacent ones to rebuild larger blocks. It is the natural partner of non-moving collectors, since it reuses holes in place. It is slower than a bump pointer because of searching and list manipulation, and it fragments: many small holes may exist while no hole fits a large request. Tuning list organization is the main way to reduce search cost.",
+    k: ["First-fit vs best-fit: first-fit is faster to find a block, while best-fit wastes less space but searches more and leaves many tiny leftover pieces.", "Single list vs segregated lists: a single list is simple and coalesces well, but search time grows with the number of blocks."],
+    p: ["Long free lists make each allocation search many entries, and allocation cost rises as the heap ages.", "Failure to coalesce neighbors leaves a heap full of small holes unable to serve a large request."],
+    v: "Allocate and free blocks of random sizes for a long run, then confirm the list coalesces back to a few large blocks when everything is freed, and measure search length against free-list size throughout.",
+    dep: ["size-classes", "mark-sweep", "pages-and-blocks"]
+  },
+  "size-classes": {
+    s: "A fixed set of block sizes, such as every 16 bytes for small objects and then geometric steps, so each request rounds up to the nearest class and allocation becomes a table lookup.",
+    d: "Requests are rounded to a class: for example 16, 32, 48, then growing by about 12 percent up to a few kilobytes. Each class has its own free list or pages, so allocation takes the first free block of the right size with no search and no splitting. The rounding wastes space inside blocks, called internal fragmentation, which is bounded by the class spacing. The set of classes is chosen from the typical object size distribution. It is hard because too many classes spread free memory thinly across many partly used pages, while too few waste space in rounding.",
+    k: ["Fine-grained classes vs coarse classes: fine classes waste little per object but spread memory over many partially filled pages; coarse ones pack better but round up more.", "Classes tuned to measured sizes vs generic geometric spacing: tuned classes fit the workload, but require profiling and shift as programs change."],
+    p: ["Hundreds of classes each holding a few partly empty pages waste far more memory than rounding does.", "An object size just above a class boundary wastes almost half the block."],
+    v: "Allocate objects with sizes from a measured distribution and confirm internal waste stays under the stated bound, and that the number of partly filled pages per class stays low.",
+    dep: ["segregated-fit", "pages-and-blocks"]
+  },
+  "segregated-fit": {
+    s: "An allocation scheme that keeps separate pages or blocks for each size class, so a request is served from the right class's free list in constant time.",
+    d: "Each page is dedicated to one size class and divided into equal cells, tracked by a free list or bitmap. Allocation pops a cell from the current page for the class; when it is empty, the allocator moves to the next page with free cells, or takes an empty page. Freeing returns cells, and a fully empty page can be returned to the page pool and reused for any class. The scheme gives constant-time allocation, little external fragmentation, and simple mark bits per cell. It is hard because memory is locked into classes: a page with a few live cells cannot be reused for another size until all its cells are free.",
+    k: ["Segregated pages by class vs one shared pool: segregation gives fast, simple allocation and per-page metadata, but a page with one live cell stays tied to its class.", "Free list threaded through cells vs a bitmap: a list is fast to pop but touches free memory; a bitmap keeps metadata separate and speeds sweeping."],
+    p: ["A phase that allocates many objects of one size, then frees most of them, leaves nearly empty pages that cannot serve other sizes.", "A free list stored inside freed cells is corrupted by a stale write after free."],
+    v: "Allocate and free objects across several classes, then confirm each page holds one class, an empty page returns to the shared pool, and the allocation cost stays constant as the heap fills.",
+    dep: ["size-classes", "pages-and-blocks", "free-list-allocator"]
+  },
+  "allocation-slow-path": {
+    s: "The runtime code reached when a fast path fails: refill the buffer, take a new region, grow the heap or trigger a collection, in that order.",
+    d: "When a thread-local buffer is exhausted, the slow path tries to take a new chunk from the current region, a free region or the shared free list. If none is available, it may expand the heap if limits allow, or request a collection and wait for it, then retry. Large requests go to the large-object path. If collections cannot free enough it raises out-of-memory. The slow path also samples allocation for profiling and checks for pacing delays. It is hard because it runs under a lock or atomic, may block on a collection, and must handle many threads arriving at once without starting several collections.",
+    k: ["Expand before collecting vs collect before expanding: expanding avoids a pause but grows memory use; collecting first keeps the heap small but pauses.", "Block the thread until collection finishes vs spin and retry: blocking saves CPU, while retrying reacts quickly if another thread's work frees space."],
+    p: ["Dozens of threads hit the slow path at once after a collection and all queue on one lock.", "Two threads each trigger a collection for the same exhaustion, causing back-to-back pauses."],
+    v: "Exhaust memory from many threads at once and confirm exactly one collection runs, all threads retry successfully afterward, and an out-of-memory error occurs only when the heap truly cannot satisfy the request.",
+    dep: ["tlab", "collection-triggers", "large-object-space", "heap-sizing-policy"]
+  },
+  "memory-zeroing": {
+    s: "Clearing newly allocated memory so that fields start as null or zero, either in bulk when buffers are taken or per object at allocation.",
+    d: "Programs expect fresh objects to have zeroed fields, and the collector requires that no stale pointer is left in an uninitialized reference field. Zeroing can happen in bulk when a buffer or region is handed out, which uses fast block instructions and streams through cache, or per object at allocation, which keeps the data hot in cache for the program's first use. Fresh pages from the operating system are already zero, so some designs skip clearing them. Large arrays are cleared in the slow path, possibly concurrently. It is hard because zeroing is a major share of allocation cost and must complete before the object is visible to other threads.",
+    k: ["Bulk zero on buffer handout vs zero per object: bulk is faster per byte and removes work from the fast path, but touches memory long before use; per-object keeps lines hot but adds an operation per allocation.", "Rely on fresh operating system pages vs always clear: relying avoids redundant work, but reused memory needs clearing and the distinction must be tracked precisely."],
+    p: ["Reused memory handed out as if already zero, so the program sees stale field values from a dead object.", "Zeroing a gigabyte array on the allocating thread stalls it for hundreds of milliseconds."],
+    v: "Allocate objects from reused memory that previously held non-zero data, read every field and confirm all are zero or null, and measure the share of allocation time spent zeroing.",
+    dep: ["tlab", "commit-and-uncommit"]
+  },
+  "large-object-space": {
+    s: "A separate area for objects above a size threshold, allocated directly in dedicated pages and typically never copied.",
+    d: "Large arrays and buffers are expensive to copy and awkward to place in buffers or size classes. Requests above a threshold, often a fraction of a region or a few tens of kilobytes, take a direct path: the allocator reserves whole pages or contiguous regions for the object. The space is managed by a free-list or page allocator, and collection treats each large object as a single unit that is marked and freed whole. In region-based collectors, a large object occupies one or more whole regions. It is hard because contiguous runs of pages fragment over time, so a large request can fail even with free memory in total, and zeroing is costly.",
+    k: ["Never move large objects vs copy them: not moving avoids huge copy costs, but leaves fragmentation of the page space; copying compacts, but is expensive.", "Allocate directly in the old area vs the young area first: direct old allocation skips young copying, but short-lived large arrays then wait for an old collection to be freed."],
+    p: ["Many short-lived large buffers allocated directly in the old area force frequent old collections.", "Fragmented page runs fail a large request though total free memory is ample, producing a misleading out-of-memory."],
+    v: "Allocate and free large arrays of varied sizes until the space is fragmented, then confirm the allocator reports the largest free run, a request above it fails or triggers compaction, and one below it succeeds.",
+    dep: ["regions", "pages-and-blocks", "memory-zeroing"]
+  },
+  "pinned-space": {
+    s: "An area where objects are never moved, for objects that native code, hardware or the runtime itself refer to by address.",
+    d: "Objects allocated here are collected by marking and freeing in place, never copied. Buffers shared with devices, objects referenced from native structures and some runtime-internal objects live here. The space uses a non-moving allocator such as size classes. Because it is separate from the moving areas, pinned objects do not fragment them. It is hard because the space cannot be compacted, so long-lived allocations of varied sizes fragment it, and because callers must know up front that an object needs to be pinned, since an already allocated moving object can only be pinned in place temporarily.",
+    k: ["Dedicated immovable space vs pinning objects in place on demand: a dedicated space keeps moving areas clean, but needs the decision at allocation; on-demand pinning is flexible but fragments the moving area.", "Mark-sweep in the pinned space vs rarely collect it: collecting reclaims memory, but adds a non-moving pass; never collecting is simple but leaks."],
+    p: ["A pinned space that is never compacted slowly fills with holes as buffers of different sizes are freed.", "An object that should have been pinned is allocated in a moving area, and native code holds a stale address."],
+    v: "Allocate and release pinned buffers of mixed sizes, run many collections, and confirm addresses never change, freed buffers are reused, and moving areas show no fragmentation from them.",
+    dep: ["pinning", "mark-sweep", "native-handles"]
+  },
+  "immortal-space": {
+    s: "A space for objects that are created at startup and live for the whole process, never scanned for liveness and never freed.",
+    d: "Boot-time objects such as core class metadata, interned constants and runtime tables are placed in a region the collector does not trace through or reclaim. Because they are never freed, they need no mark bits or copying. They are still scanned for pointers into collectable areas, or have a remembered set, since they may refer to later objects. Some systems write this space to a file, allowing a fast start by mapping it back. It reduces collection work and metadata. It is hard because anything put there stays forever, so a mistake in what is promoted into it is a permanent leak.",
+    k: ["Immortal space vs normal old area: immortal space saves repeated marking of stable data, but cannot reclaim mistakes.", "Treat as roots vs trace through: treating all immortal objects as roots is simple but may keep garbage alive; tracing needs a mark state for them."],
+    p: ["Transient data accidentally allocated in the immortal space is never freed, and the process grows forever.", "Immortal objects referencing a young object without a remembered-set entry, so the young object is freed."],
+    v: "Start the runtime and confirm collections never scan or move immortal objects, memory used by the space is constant across hours of load, and old-to-young pointers from it are found by a collection.",
+    dep: ["spaces", "remembered-sets", "regions"]
+  },
+  "code-and-metadata-space": {
+    s: "Areas holding compiled code, class descriptors and other runtime metadata, with reclamation tied to the lifetime of loaded code rather than to ordinary object reachability.",
+    d: "Compiled machine code, type descriptors, method tables and constant pools live outside the ordinary object heap, because they have different alignment, permissions and lifetimes. They hold pointers into the heap, so the collector scans them as roots or through a card-like mechanism, and heap objects hold pointers into them. Reclamation happens when a loader and all its types become unreachable, or when compiled code is replaced and no thread is running it. It is hard because code cannot be moved freely while threads execute it, and unloading requires proving that no frame, inline cache or object still refers to it.",
+    k: ["Separate from the object heap vs inside it: a separate space allows executable permissions and its own sizing, but adds another limit that can run out independently.", "Reclaim code immediately when replaced vs after a safepoint check: immediate reuse saves memory, but a thread may still be executing the old code."],
+    p: ["The metadata space fills with classes generated at runtime while the object heap has room, causing an out-of-memory.", "Freeing code that a thread is still running causes a crash far from the cause."],
+    v: "Load and drop thousands of generated types, run collections and confirm metadata usage returns to baseline, while a type still referenced by a live object is retained and compiled code in use is not freed.",
+    dep: ["class-unloading", "global-roots", "spaces"]
+  },
+  "off-heap-buffers": {
+    s: "Memory allocated outside the collected heap, often for I/O, whose lifetime is tied to a small managed owner object that the collector tracks.",
+    d: "Large buffers for networking, files or hardware are allocated directly from the operating system, so they are never copied and never limited by the heap size. A small managed object holds the address; a cleanup action, run through a reference queue or explicit close, frees the native memory when that owner dies. The collector cannot see the native size, so heap pressure does not reflect native pressure, and collections may not run when native memory is the scarce resource. It is hard because native memory pressure should trigger collection but does not, and a leaked owner object leaks the buffer silently.",
+    k: ["Explicit release vs cleanup on owner death: explicit release is prompt and exact, but depends on callers; cleanup on death is automatic but late and tied to collections that may not happen.", "Account native size toward collection triggers vs ignore it: accounting keeps native growth in check by prompting collections, at the cost of extra bookkeeping and an inexact signal."],
+    p: ["Native buffers pile up because the small owner objects die slowly and no collection is triggered to free them.", "Closing a buffer twice or using it after close touches freed native memory."],
+    v: "Allocate and drop many off-heap buffers while the heap stays small, and confirm native memory is freed after collections or close, with process resident memory staying within limits throughout.",
+    dep: ["reference-queues", "native-handles", "footprint-limits"]
+  },
+  "class-unloading": {
+    s: "Freeing the type metadata, static data and compiled code of a loader and its types once nothing can reach them, which keeps long-running systems with dynamic code from leaking.",
+    d: "Types are kept alive by their loader, and a loader is kept alive by any instance of its types, its static fields and anything referencing them. After marking, the collector checks which loaders are unmarked, and unlinks their types from dictionaries, frees metadata and compiled code, and clears caches. This is done at a pause or concurrently with extra synchronization. It is hard because the dependency graph is wide: one stray reference to a type, such as from a thread-local or a registered callback, keeps the whole loader and all its statics alive, which is the typical cause of a metadata leak after redeployment.",
+    k: ["Unload during a pause vs concurrently: pause unloading is simple and exact, but lengthens the pause; concurrent unloading shortens it and needs careful coordination with running code.", "Unload at every full collection vs only when metadata is under pressure: every time bounds metadata growth, but costs a scan; on pressure saves work but risks a sudden large pause."],
+    p: ["A single static reference to a type from a long-lived thread keeps an entire redeployed application's types alive.", "Repeated redeploys fill the metadata space and exhaust it while the object heap has room."],
+    v: "Load a set of types in a throwaway loader, drop all references, run a collection and confirm the loader, its types and their compiled code are gone and metadata usage drops accordingly.",
+    dep: ["code-and-metadata-space", "tricolor-marking", "global-roots"]
+  },
+  "intern-table-cleanup": {
+    s: "Removing entries from tables that canonicalize strings and symbols when nothing else refers to them, so the table does not grow without bound.",
+    d: "Interning keeps one canonical copy of equal strings in a hash table. If the table holds its entries strongly, every interned value lives forever. With weak entries, the collector clears entries whose strings were not marked by any other path. Clearing runs after marking, as part of reference processing, and compacts or marks the table's buckets. Parallel workers split the table among them. It is hard because the table can be very large, so cleanup time becomes a notable part of the pause, and lookups racing with clearing must not return a string being freed.",
+    k: ["Weak entries vs strong entries: weak entries free unused strings and bound memory, but need cleanup work each cycle; strong entries are simple but can leak.", "Clean the table during the pause vs concurrently: pause cleanup is exact and simple, while concurrent cleanup shortens pauses but needs barriers on lookups."],
+    p: ["Programs that intern unbounded user-supplied strings grow the table, and cleanup time dominates the pause.", "A lookup returns an entry the collector has just decided to clear, and the program uses a freed string."],
+    v: "Intern a million unique strings, drop all references, collect, and confirm the table shrinks to near its baseline, while strings still referenced elsewhere are retained and lookups still succeed.",
+    dep: ["weak-references", "global-roots", "parallel-gc-workers"]
+  },
+});

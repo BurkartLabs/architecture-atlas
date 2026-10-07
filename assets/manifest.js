@@ -8,6 +8,66 @@ window.ATLAS_MANIFEST = {
     "details-5.js",
     "details.js"
   ],
+  "microkernel": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js"
+  ],
+  "bootloader": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js"
+  ],
+  "hypervisor": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "device-drivers": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "filesystem": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "container-runtime": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "init-system": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "shell-terminal": [
+    "data.js",
+    "details-1.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js"
+  ],
   "compiler": [
     "data.js",
     "details-2.js",
@@ -16,12 +76,85 @@ window.ATLAS_MANIFEST = {
     "details-5.js",
     "details.js"
   ],
+  "bytecode-vm": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "jit-compiler": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "garbage-collector": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details.js"
+  ],
+  "linker-loader": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "debugger-profiler": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "language-server": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "text-editor": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details.js"
+  ],
   "web-browser": [
     "data.js",
     "details-2.js",
     "details-3.js",
     "details-4.js",
     "details.js"
+  ],
+  "rendering-engine": [
+    "data.js"
+  ],
+  "web-server": [
+    "data.js"
+  ],
+  "web-framework": [
+    "data.js"
+  ],
+  "static-site-cms": [
+    "data.js"
+  ],
+  "search-engine": [
+    "data.js"
+  ],
+  "web-crawler": [
+    "data.js"
   ],
   "relational-database": [
     "data.js",
