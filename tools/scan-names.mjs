@@ -19,7 +19,7 @@ const NAMES = [
   "nginx", "Nginx", "Apache", "HAProxy", "Envoy", "Istio", "Linkerd", "Varnish", "Memcached", "Elasticsearch",
   "Lucene", "Solr", "OpenSearch", "RocksDB", "LevelDB", "Cassandra", "DynamoDB", "MongoDB", "RabbitMQ", "Pulsar",
   "NATS", "Flink", "Spark", "Hadoop", "Airflow", "Iceberg", "Snowflake", "BigQuery", "Redshift", "ClickHouse",
-  "Neo4j", "Debezium", "Django", "Rails", "Laravel", "Spring", "Next\\.js", "Vue", "Angular", "Svelte", "GraphQL",
+  "Neo4j", "Debezium", "Django", "Rails", "Laravel", "Spring", "Next\\.js", "Vue", "Svelte", "GraphQL",
   "Selenium", "Playwright", "Puppeteer", "WordPress", "Contentful", "Prometheus", "PromQL", "Grafana", "Jaeger",
   "Zipkin", "OpenTelemetry", "InfluxDB", "Terraform", "Pulumi", "Ansible", "Puppet", "Chef", "Consul", "ZooKeeper",
   "Raft", "Paxos", "Akka", "Orleans", "Slurm", "gRPC", "Thrift", "Protobuf", "protobuf", "Maglev",
