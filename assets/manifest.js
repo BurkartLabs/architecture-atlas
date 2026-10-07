@@ -131,6 +131,36 @@ window.ATLAS_MANIFEST = {
     "details-6.js",
     "details.js"
   ],
+  "version-control": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details.js"
+  ],
+  "build-system": [
+    "data.js",
+    "details-10.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details-7.js",
+    "details-8.js",
+    "details-9.js",
+    "details.js"
+  ],
+  "package-manager": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
   "web-browser": [
     "data.js",
     "details-2.js",
@@ -138,7 +168,97 @@ window.ATLAS_MANIFEST = {
     "details-4.js",
     "details.js"
   ],
+  "rendering-engine": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "web-server": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "web-framework": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "static-site-cms": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details.js"
+  ],
+  "search-engine": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details.js"
+  ],
+  "web-crawler": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js",
+    "details-e.js",
+    "details-f.js"
+  ],
   "relational-database": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "embedded-database": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "key-value-store": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details-5.js",
+    "details-6.js",
+    "details.js"
+  ],
+  "in-memory-cache": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js",
+    "details-d.js"
+  ],
+  "message-queue": [
+    "data.js",
+    "details-2.js",
+    "details-3.js",
+    "details-4.js",
+    "details.js"
+  ],
+  "search-index": [
+    "data.js",
+    "details-a.js",
+    "details-b.js",
+    "details-c.js"
+  ],
+  "stream-processor": [
     "data.js",
     "details-2.js",
     "details-3.js",
