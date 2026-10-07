@@ -22,7 +22,7 @@ const NAMES = [
   "Neo4j", "Debezium", "Django", "Rails", "Laravel", "Spring", "Next\\.js", "Vue", "Angular", "Svelte", "GraphQL",
   "Selenium", "Playwright", "Puppeteer", "WordPress", "Contentful", "Prometheus", "PromQL", "Grafana", "Jaeger",
   "Zipkin", "OpenTelemetry", "InfluxDB", "Terraform", "Pulumi", "Ansible", "Puppet", "Chef", "Consul", "ZooKeeper",
-  "Raft", "Paxos", "Temporal", "Akka", "Orleans", "Slurm", "gRPC", "Thrift", "Protobuf", "protobuf", "Maglev",
+  "Raft", "Paxos", "Akka", "Orleans", "Slurm", "gRPC", "Thrift", "Protobuf", "protobuf", "Maglev",
   "Bitcoin", "Ethereum", "Jenkins", "GitHub", "GitLab", "Bitbucket", "Gerrit", "Jira", "LaunchDarkly", "Sentry",
   "Postman", "JMeter", "Backstage", "Dependabot", "Snyk",
   // security
@@ -39,7 +39,7 @@ const NAMES = [
   "DPDK", "BIND", "Unbound", "dnsmasq", "ISC", "WireGuard", "OpenVPN", "IPsec", "OpenFlow", "FRR", "Quagga",
   "iptables", "nftables", "pf", "Postfix", "Exim", "Sendmail", "Dovecot", "Thunderbird", "Outlook", "Asterisk",
   "FreeSWITCH", "Zoom", "Slack", "Discord", "BitTorrent", "ROS", "PX4", "ArduPilot", "AUTOSAR",
-  "CODESYS", "Zigbee", "Z-Wave", "Thread", "Verilog", "VHDL", "Vivado", "Quartus", "KiCad", "Altium", "cFS",
+  "CODESYS", "Zigbee", "Z-Wave", "Verilog", "VHDL", "Vivado", "Quartus", "KiCad", "Altium", "cFS",
   "Blender", "Maya", "Houdini", "Nuke", "Arnold", "RenderMan", "Ableton", "Pro Tools", "Premiere", "DaVinci",
   "Twitch", "Spotify", "OpenXR", "HarfBuzz", "FreeType", "ImageMagick", "libvips", "OpenStreetMap", "OSRM",
   "SolidWorks", "Parasolid", "Shopify", "Magento", "Stripe", "Visa", "Mastercard", "SWIFT", "NASDAQ", "Square",
