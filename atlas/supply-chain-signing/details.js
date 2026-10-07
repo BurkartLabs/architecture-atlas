@@ -1,0 +1,131 @@
+// Details for the supply-chain signing plate, part 1: enforcement and verification.
+ATLAS.details("supply-chain-signing", {
+  "admission-controller": {
+    s: "A hook in the cluster or platform control plane that intercepts every request to run workloads and can reject those that fail verification before anything is scheduled.",
+    d: "The orchestrator calls the controller synchronously with the proposed object. The controller extracts every image or package reference, resolves each to a digest, runs verification and returns allow or deny with a reason. It sits on the critical path of every deployment, so it needs high availability and tight timeouts. It must also cover every route workloads can take: new pods, controllers that create pods later, and jobs. What makes it hard is that it sees references, not bytes, so tags must be resolved first, and the answer must stay consistent with what is later pulled.",
+    k: ["Validating hook versus mutating hook: mutation can rewrite tags to verified digests so pulls match what was checked, but it changes objects and surprises deployment tooling.", "Fail closed versus fail open on controller outage: failing closed protects the cluster but a controller crash blocks all deployments, including the fix.", "One central controller versus per-namespace policy: central gives one audit point, per-namespace lets teams move at different speeds but multiplies exceptions."],
+    p: ["Namespaces exempted to bootstrap the controller itself stay exempt forever and become the easiest place to run unsigned code.", "Checking the tag at admission while the runtime later pulls a different digest for the same tag defeats the check."],
+    v: "Submit one workload referencing a correctly signed digest and one referencing an unsigned digest in the same namespace. The first starts, the second is rejected with a reason naming the failed policy, and both decisions appear in the audit log.",
+    dep: ["verification-policy","admission-policy-engine","digest-versus-tag-pinning"]
+  },
+  "admission-policy-engine": {
+    s: "The evaluator that turns written rules about images, signers and attestations into allow or deny decisions for each admission request.",
+    d: "Policies are declarative documents matched against request attributes such as namespace, labels and image reference. The engine evaluates them, fetching signatures and attestations through the verification library, and returns the first denial or an allow with warnings. It must handle partial failure: a registry that is slow, a log that cannot be reached, an attestation that is malformed. Policies are versioned and tested like code. The difficulty is expressiveness: rules must be strict enough to mean something and simple enough that reviewers can see what they actually permit.",
+    k: ["General-purpose policy language versus purpose-built image rules: a general language can express anything but invites policies nobody can audit; purpose-built rules are easier to reason about but hit limits fast.", "Evaluate at request time versus precompute per image: request time sees fresh state, precomputing is faster but can go stale between evaluations."],
+    p: ["A policy that matches by image name pattern silently skips workloads using a different registry alias for the same content.", "Warnings that never block are ignored; teams run for months with warnings no one reads."],
+    v: "Run the policy suite against a fixture set containing signed, unsigned, wrong-signer and expired-certificate images and confirm each yields its expected verdict and message. Deploy a policy change in audit mode and compare its verdicts with the live ones.",
+    dep: ["verification-policy","identity-matching-rules","attestation-predicate-checks"]
+  },
+  "image-pull-verification": {
+    s: "Verification performed by the container runtime or node agent at pull time, so a node checks signatures even when workloads reach it by a route that bypassed admission.",
+    d: "The runtime consults a policy file or plugin before it unpacks layers. It resolves the reference, fetches the signature stored beside the digest, verifies it and refuses to unpack on failure. This covers static workloads, node-local agents and clusters with no central hook. Because the check is per node, it needs the trust roots and policy delivered to every node and kept current. It is harder to update than a central controller and gives less context, since the node knows only the image and not the intended deployment.",
+    k: ["Node-level enforcement versus control-plane enforcement: nodes catch every route and keep working if the control plane is bypassed, but policy rollout touches every machine.", "Verify before unpack versus verify after: checking first avoids writing untrusted data to disk, at the cost of an extra round trip before every cold start."],
+    p: ["Nodes with a stale policy file accept signers the organization has since removed.", "A pull-through cache that serves content without the signature leaves nodes verifying nothing while appearing configured."],
+    v: "Pull an unsigned image directly on a node using the runtime command line, bypassing the control plane. The pull fails with a policy error and no layers appear in the local content store.",
+    dep: ["verification-policy","signature-referrers","trust-root-distribution"]
+  },
+  "package-manager-verification": {
+    s: "Signature and provenance checks built into the client that installs libraries or system packages, run before anything is unpacked or executed on a developer or build machine.",
+    d: "The client downloads package metadata and the package, locates the signature or attestation, checks it against a trusted signer list or identity policy and compares the content digest to a lockfile. Failures abort the install. Because clients are numerous and heterogeneous, verification must default sensibly and not rely on each user configuring it. Package ecosystems differ in whether publishers sign at all, and many packages carry no signature, so the real policy question is what to do with unsigned ones. Install scripts can run before any check completes.",
+    k: ["Verify at install versus verify in the build pipeline: client checks protect developer laptops but pipelines catch everything once, with controlled trust roots.", "Require signatures for all packages versus per-ecosystem opt-in: universal requirement is the goal but breaks installs for the unsigned majority until adoption catches up."],
+    p: ["Verification that is off by default is off for nearly everyone, and the failure is invisible.", "Install-time scripts that execute before verification completes make the check cosmetic."],
+    v: "Install a package whose content was altered after signing and confirm the client aborts before running any install script, printing which check failed. Then install the unmodified package and confirm it succeeds.",
+    dep: ["trusted-signer-allowlist","lockfile-integrity","package-and-binary-signing"]
+  },
+  "signature-verification-cache": {
+    s: "A store of recent verification results keyed by digest and policy version, so repeated checks of the same artifact do not hit registries and logs again.",
+    d: "Verification may involve fetching a signature, a certificate chain, a log proof and several attestations. Caching the result keyed by digest plus the policy version and trust-root version avoids repeating that work on every pod start. Entries carry an expiry no later than the shortest validity involved, such as certificate lifetime or revocation freshness. The hard part is invalidation: a policy change, a revoked signer or a new deny entry must evict affected results immediately, or the cache keeps approving what was just forbidden.",
+    k: ["Cache positive results versus cache nothing: caching keeps admission fast and tolerates registry outages, but makes revocation lag as long as the entry lifetime.", "Key by digest only versus digest plus policy version: including the policy version prevents stale approvals after rules tighten, at the cost of re-verifying everything on each policy change."],
+    p: ["A long entry lifetime keeps accepting an image after its signer was revoked, until the entry expires.", "A cache shared across tenants with different policies lets one tenant's permissive verdict satisfy another's strict check."],
+    v: "Verify an image, add its signer to the deny list and re-request admission. The request is denied immediately, and the cache shows the earlier entry evicted rather than expired.",
+    dep: ["verification-policy","deny-list-distribution","verification-result-record"]
+  },
+  "audit-mode-rollout": {
+    s: "Running enforcement in report-only mode first, then blocking by namespace or environment, so a new policy reveals its breakage before it stops anyone's deployment.",
+    d: "A policy has a mode: record violations without blocking, warn the user, or deny. Teams start in report-only, read a report of what would have been blocked, fix or exempt, and then tighten by scope: one environment, then production. Reports aggregate by workload, owner and reason. Exemptions are explicit, owned and expiring. The difficulty is human: reports need owners who act on them, and a deadline has to be real, otherwise report-only becomes permanent and the organization believes it is protected.",
+    k: ["Big-bang enforcement versus staged rollout: staging avoids outages and builds trust, but extends the period in which unsigned software still runs.", "Exemptions by workload versus by namespace: workload exemptions are precise and visible, namespace exemptions are quick and quietly cover every future workload there."],
+    p: ["Report-only mode that never has an end date becomes permanent, and violations accumulate unread.", "Exemptions created during rollout have no owner or expiry and outlive the project that needed them."],
+    v: "Switch a policy from report-only to deny for one environment. Confirm the report shows zero would-be-blocked workloads for that environment beforehand, and that a deliberately unsigned test workload is then rejected there only.",
+    dep: ["admission-policy-engine","verification-result-record"]
+  },
+  "break-glass-override": {
+    s: "A controlled, audited way to deploy software that fails policy during an incident, with approval, a time limit and a record that cannot be quietly skipped.",
+    d: "When verification infrastructure fails or a critical fix cannot yet be signed, operators need a way through. A break-glass path grants a scoped, expiring exception: a specific digest in a specific place for a specific time, approved by a named person and logged to a store the requester cannot edit. Afterwards the exception is reviewed. Without it, teams disable enforcement wholesale in an emergency. It is hard to make narrow: the more powerful it is, the more attractive it is to attackers and the more routine use erodes the policy.",
+    k: ["Narrow digest-scoped exceptions versus a global off switch: scoped exceptions limit exposure but need tooling operators can use under pressure; a global switch is easy and rarely turned back on.", "Single approver versus two-person approval: two people slows an incident but prevents one stolen account from bypassing everything."],
+    p: ["An override with no expiry becomes a standing hole that later deployments reuse.", "Overrides recorded only in chat are invisible to auditors and to the next on-call engineer."],
+    v: "Grant an override for one unsigned digest with a thirty-minute lifetime. Confirm that digest deploys, that a different unsigned digest is still denied, and that after expiry the first is denied again with the grant visible in the audit log.",
+    dep: ["admission-controller","signing-audit-trail","verification-policy"]
+  },
+  "runtime-attestation-check": {
+    s: "Checking, after deployment, that what is actually running matches a verified artifact, and that the host running it can prove its own state.",
+    d: "Admission checks what was requested; this checks what is running. An agent compares running image digests and loaded binaries to the verified set, and may request evidence from the host's measured boot and trusted hardware about its software state. Results feed a monitoring pipeline that flags drift: a container replaced in place, a binary patched on disk, a node with unexpected software. It is hard because legitimate state is complex: a node loads many components, and expressing the allowed set without constant false alarms takes careful baselines.",
+    k: ["Continuous runtime checking versus checking only at admission: continuous catches in-place tampering after deployment but adds agents, load and alerts to tune.", "Host attestation as a deployment gate versus as monitoring only: gating prevents workloads reaching unproven hosts, but a flaky attestation service then blocks capacity."],
+    p: ["Baselines built from a snapshot of a running fleet may encode an already compromised state as normal.", "Alerts on every legitimate update train responders to ignore drift alerts."],
+    v: "Replace a binary inside a running container with a modified one. The agent reports that the running content no longer matches the verified digest within its check interval, naming the workload and the changed file.",
+    dep: ["admission-controller","content-digest","verification-result-record"]
+  },
+  "verification-policy": {
+    s: "The written, machine-evaluable rule set that states which signers, attestations and conditions make an artifact acceptable in a given place.",
+    d: "A policy lists for each scope what must be true: signed by one of these identities, carrying provenance from a trusted builder, with an inclusion proof in the log, not older than a limit. It is data, versioned and reviewed, separate from the verifier code. The verifier compiles it into checks and returns a verdict with reasons. The hard part is precision: a policy that says signed by anyone from a broad identity domain accepts attackers who can obtain a certificate in that domain, so identities must be matched as narrowly as the workflow permits.",
+    k: ["Strict per-artifact identities versus broad organization-level identities: strict limits blast radius if one pipeline is compromised, but forces a policy change whenever a pipeline moves.", "Policy as code in a repository versus configured in a console: code gets review and history, a console is quicker but leaves no trail of why a rule exists."],
+    p: ["A wildcard identity pattern that matches more workflows than intended lets any of them sign production artifacts.", "A policy that checks signature presence but not signer lets any valid signature pass."],
+    v: "Evaluate the policy against an artifact signed by an identity just outside the allowed pattern, differing by one path segment. The verdict is deny and the reason names the identity that failed to match.",
+    dep: ["identity-matching-rules","trusted-signer-allowlist","attestation-predicate-checks","freshness-and-expiry-checks"]
+  },
+  "identity-matching-rules": {
+    s: "The rules for matching the identity recorded in a signing certificate, such as issuer and subject, against the identities a policy allows.",
+    d: "A keyless certificate records who signed: an issuer of the identity token and a subject naming a person, workflow or service. The rules compare these fields, either exactly or by pattern, and may check further claims such as the source repository and branch. Exact matches are safe but rigid; patterns are flexible but risk matching attacker-controlled strings. The difficulty is that identity strings are produced by other systems with their own naming rules, so a pattern must anticipate every string those systems can legally produce, including ones an attacker can pick.",
+    k: ["Exact string match versus regular expression: exact is unambiguous and hard to misuse, regular expressions handle many workflows but fail silently when an unanchored pattern matches a longer attacker-chosen name.", "Match issuer and subject together versus subject alone: requiring both prevents a different identity provider asserting the same subject name."],
+    p: ["An unanchored pattern matches any identity that merely contains the expected text.", "Matching on a mutable name, such as a branch or repository name that can be recreated, lets someone else take over the identity."],
+    v: "Present certificates with a lookalike subject, a matching subject from the wrong issuer and a correct one. Only the correct pair is accepted, and the two rejections state which field differed.",
+    dep: ["certificate-identity-extensions","oidc-identity-token"]
+  },
+  "trusted-signer-allowlist": {
+    s: "The explicit list of keys or identities a verifier will accept for a given artifact namespace, owned and changed through review.",
+    d: "For key-based signing it holds public keys with scope and validity; for identity-based it holds identity patterns. Entries are scoped so that a signer trusted for one product is not trusted for another. Changes go through the same review as code because adding a signer extends who can ship to production. Distribution matters as much as content: a verifier must receive the list through a channel an attacker cannot alter. The difficulty is lifecycle: entries for departed teams and retired keys must be removed, and nobody owns removals unless someone is assigned.",
+    k: ["Scoped per-namespace trust versus one global list: scoped limits damage from a compromised signer, global is simple but makes every signer a universal one.", "Pinning specific keys versus pinning an issuing authority: keys give tight control but need updates at rotation; an authority trusts its issuing rules instead."],
+    p: ["Entries for retired keys or departed teams remain valid for years because nobody reviews the list.", "A signer added for a test and left in place can later sign production artifacts."],
+    v: "Remove a signer from the list, distribute it and confirm artifacts the signer previously produced are rejected on the next verification while others pass. The change appears with its reviewer in the policy history.",
+    dep: ["policy-distribution","trust-root-distribution"]
+  },
+  "attestation-predicate-checks": {
+    s: "Evaluation of the contents of signed statements, such as builder, source repository and build parameters, against what the policy requires.",
+    d: "After the envelope signature verifies and the subject digest matches the artifact, the verifier parses the predicate and tests its fields: the builder identity is on the approved list, the source repository and revision are expected, the build type is one the policy understands, and no parameters were overridden by the requester. Missing fields count as failure. The difficulty is that a verified signature only proves who made the statement, not that it is true, so the policy must check that the statement was made by an entity entitled to make it.",
+    k: ["Check specific fields versus accept any well-formed statement: specific checks catch a legitimate builder asked to build the wrong thing, at the price of policies tied to predicate formats.", "Reject unknown predicate versions versus tolerate them: rejecting is safe and breaks on upgrade, tolerating lets fields the verifier does not understand go unchecked."],
+    p: ["Verifying the signature but never inspecting the predicate means any statement from a trusted signer passes, true or not.", "A policy that ignores unknown fields misses a new parameter that changes build behavior."],
+    v: "Submit a validly signed provenance statement that names an unapproved builder or a different repository. The signature check passes, the predicate check fails, and the verdict names the field that did not match.",
+    dep: ["provenance-statement","predicate-types","builder-identity-claims"]
+  },
+  "threshold-policy": {
+    s: "A rule requiring signatures or attestations from several independent parties, such as a builder and a reviewer, before an artifact is accepted.",
+    d: "The policy states a count and a set of eligible signers, for example any two of three, or one of each of several roles. The verifier checks each signature independently, counts distinct valid signers and verifies each signer is eligible. Distinct means distinct roles or keys, not the same key presented twice. The purpose is to make one compromised key or person insufficient. The difficulty is operational: a threshold that cannot be met during an incident gets bypassed, and signers who always sign together offer no independence.",
+    k: ["Higher thresholds versus availability: more required signers lowers the chance one compromise suffices but raises the chance a release stalls because someone is away.", "Role-based quorums versus any-of-N: roles ensure different kinds of check, any-of-N is simpler but may count three signatures from one team."],
+    p: ["Counting the same signer's key under two names meets the threshold with one party.", "Automated approvers that sign anything satisfy the quorum without a human ever looking."],
+    v: "Present an artifact with one valid signature and a second signature from a revoked key. The verdict is deny with a message that one of two required valid signers was found, then add a valid second signer and see it pass.",
+    dep: ["trusted-signer-allowlist","review-attestation","detached-signature"]
+  },
+  "freshness-and-expiry-checks": {
+    s: "Checks that signatures, certificates, attestations and metadata are within their validity time, judged at the right moment: signing time for certificates, current time for metadata.",
+    d: "A short-lived certificate has expired by the time anyone verifies; what matters is whether the signature was made while it was valid, which a log timestamp or inclusion time proves. Policy metadata and trust roots, by contrast, must be current, or an attacker can replay an old version. Attestations may also carry a maximum age so that a build from years ago is not treated as a recent one. Hard parts are clocks that disagree and proofs of time that come from the same party being checked.",
+    k: ["Evaluate certificates at signing time versus at verification time: signing time lets short-lived certificates work later but needs a trustworthy record of when signing occurred.", "Maximum attestation age versus none: age limits stop stale evidence being reused but force rebuilds just to refresh statements."],
+    p: ["Judging a ten-minute certificate by the current time rejects every legitimate signature a day later.", "Trusting a timestamp supplied by the signer lets an attacker backdate a signature to when a stolen key was valid."],
+    v: "Verify an artifact signed with a certificate that expired yesterday but was logged within its lifetime. It passes. Re-run with the log time moved outside the validity window and confirm it fails with an expiry reason.",
+    dep: ["trusted-timestamping","signed-tree-head","short-lived-signing-certificate"]
+  },
+  "policy-distribution": {
+    s: "The channel that delivers verification policies and their updates to every verifier, with integrity of its own so policy cannot be altered in transit.",
+    d: "Policies live in a repository, are reviewed, signed and published to a store the verifiers poll or are pushed to. Each verifier checks the policy's signature and version before applying it, refuses an older version than it already holds, and reports which version it runs. Operators watch for stragglers. The difficulty is the bootstrapping loop: policy that says whom to trust must itself be trusted, so it needs a root the verifier already holds, and a verifier that cannot reach the store must have a safe default.",
+    k: ["Pull versus push distribution: pulling lets verifiers keep working through outages and is easy to scale, pushing applies urgent changes faster but needs a reliable channel to every verifier.", "Signed policy bundles versus trusting the transport: signed bundles survive compromised mirrors, trusting the channel is simpler and only as strong as the channel."],
+    p: ["Verifiers that fail to fetch silently keep an old, looser policy and report healthy.", "Accepting any validly signed policy, including an older one, lets an attacker restore a weaker version."],
+    v: "Publish a new policy version and check that every verifier reports it within the target time. Attempt to publish an older signed version and confirm verifiers refuse it.",
+    dep: ["rollback-protection","trust-root-distribution","delegated-metadata"]
+  },
+  "verification-result-record": {
+    s: "A durable record of each verification decision, with the policy version, evidence examined and verdict, so decisions can be audited and re-examined later.",
+    d: "Each decision writes a structured record: artifact digest, requester, policy and trust-root versions, which signatures and attestations were seen, log proof identifiers and the verdict with reasons. Records go to an append-only store. They answer later questions: why was this allowed, what else did that signer approve, which deployments relied on this key. They also feed dashboards of denial rates. The difficulty is volume and truthfulness: records must be cheap to emit on a hot path and must be written even when the decision was to allow quickly from cache.",
+    k: ["Record every decision versus only denials: full records support investigations after a compromise but are large; denial-only is cheap and cannot say what was allowed.", "Store evidence copies versus references: copies survive the registry deleting a signature, references stay small but can dangle."],
+    p: ["Records that omit the policy version cannot explain why a decision was allowed once the policy has changed.", "Recording only on deny leaves nothing to search when a signer is later found compromised."],
+    v: "After a revocation notice, query the records for every deployment whose approval relied on the revoked signer and confirm the list matches the set found independently from the deployed inventory.",
+    dep: ["signing-audit-trail","verification-policy"]
+  },
+});
