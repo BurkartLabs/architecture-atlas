@@ -1,0 +1,6 @@
+.git
+docs
+tools
+infra/*.bicep
+infra/*.ps1
+atlas/game-engine/kiln.html
